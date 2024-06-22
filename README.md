@@ -1,7 +1,7 @@
 ````
-chmod +x generate_load.sh
+sudo chmod +x file_name.sh
 `````
 
 `````
-./generate_load.sh
+./file_name.sh
 `````
