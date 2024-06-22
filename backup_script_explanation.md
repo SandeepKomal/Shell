@@ -10,7 +10,7 @@ to the backup directory.
 of the backup.
 
 ## Scheduling with Cron
-To run the backup script at regular intervals, use crontab -e to edit the crontab file and add:
+To run the backup script at regular intervals, use "crontab -e" to edit the crontab file and add:
 ```
 * * * * * /path/to/backup_script.sh
 ```
