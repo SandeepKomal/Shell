@@ -58,3 +58,6 @@ VALUES('1','Muscle Magazine','Jude Mag', 'June 2013',
 SELECT * 
 FROM Catalog;
 ```
+```
+EXIT;
+```
