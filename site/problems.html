@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
-  <meta name="description" content="Every common bash error explained: what it means, why it happens, how to confirm it, how to fix it and how to prevent it. 38 entries, from command not found to unbound variable.">
+  <meta name="description" content="Every common bash error explained: what it means, why it happens, how to confirm it, how to fix it and how to prevent it. 45 entries, from command not found to unbound variable.">
   <meta property="og:type" content="article">
   <meta property="og:title" content="Bash errors, explained">
-  <meta property="og:description" content="Symptom, cause, confirm, fix and prevent for 38 common bash errors.">
+  <meta property="og:description" content="Symptom, cause, confirm, fix and prevent for 45 common bash errors.">
   <meta property="og:url" content="https://sandeepkomal.github.io/Shell/problems.html">
   <link rel="canonical" href="https://sandeepkomal.github.io/Shell/problems.html">
   <title>Bash errors explained</title>
@@ -26,12 +26,13 @@
     <ul class="note">
       <li>Running scripts: <a href="#command-not-found">command not found</a>, <a href="#permission-denied">Permission denied</a>, <a href="#no-such-file">No such file or directory</a>, <a href="#required-file-not-found">cannot execute: required file not found</a>, <a href="#carriage-return">$'\r': command not found</a>, <a href="#dash-not-found">[[: not found</a>, <a href="#argument-list-too-long">Argument list too long</a></li>
       <li>Syntax: <a href="#syntax-error-token">syntax error near unexpected token</a>, <a href="#unexpected-end-of-file">syntax error: unexpected end of file</a>, <a href="#unexpected-eof-matching">unexpected EOF while looking for matching</a></li>
-      <li>Variables: <a href="#unbound-variable">unbound variable</a>, <a href="#parameter-null">parameter null or not set</a>, <a href="#bad-substitution">bad substitution</a>, <a href="#readonly-variable">readonly variable</a>, <a href="#not-valid-identifier">not a valid identifier</a></li>
+      <li>Variables: <a href="#unbound-variable">unbound variable</a>, <a href="#parameter-null">parameter null or not set</a>, <a href="#bad-substitution">bad substitution</a>, <a href="#readonly-variable">readonly variable</a>, <a href="#not-valid-identifier">not a valid identifier</a>, <a href="#ifs-changed">Words no longer split after changing IFS</a></li>
       <li>Tests: <a href="#unary-operator-expected">unary operator expected</a>, <a href="#binary-operator-expected">binary operator expected</a>, <a href="#too-many-arguments">too many arguments</a>, <a href="#integer-expression-expected">integer expression expected</a></li>
       <li>Arithmetic: <a href="#operand-expected">syntax error: operand expected</a>, <a href="#value-too-great-for-base">value too great for base</a>, <a href="#division-by-zero">division by 0</a></li>
       <li>Redirection: <a href="#ambiguous-redirect">ambiguous redirect</a>, <a href="#here-document-eof">here-document delimited by end-of-file</a></li>
       <li>Functions: <a href="#return-numeric">return: numeric argument required</a>, <a href="#local-outside-function">local: can only be used in a function</a>, <a href="#illegal-option">illegal option</a>, <a href="#maximum-nesting">maximum function nesting level exceeded</a></li>
-      <li>Text tools: <a href="#unknown-option-to-s">sed: unknown option to `s'</a>, <a href="#find-paths-must-precede">find: paths must precede expression</a>, <a href="#cannot-stat">cp: cannot stat</a></li>
+      <li>Text tools: <a href="#unknown-option-to-s">sed: unknown option to `s'</a>, <a href="#find-paths-must-precede">find: paths must precede expression</a>, <a href="#cannot-stat">cp: cannot stat</a>, <a href="#date-invalid">date: invalid date</a></li>
+      <li>Jobs and signals: <a href="#background-status-lost">A failed background job did not fail the script</a>, <a href="#wait-not-child">wait: pid is not a child of this shell</a>, <a href="#terminated">Terminated</a>, <a href="#nohup-ignoring-input">nohup: ignoring input and appending output to 'nohup.out'</a>, <a href="#timeout-124">Exit status 124 from timeout</a></li>
       <li>Exit status: <a href="#exit-status-codes">What does exit status 126, 127, 130 or 137 mean?</a>, <a href="#exits-silently">Script exits silently with set -e</a>, <a href="#set-e-did-not-stop">set -e did not stop the script</a>, <a href="#variable-empty-after-loop">A variable is empty after a loop</a>, <a href="#last-line-missing">The last line of a file is skipped</a></li>
       <li>Cron and environment: <a href="#works-in-terminal-not-cron">Works in the terminal, fails from cron</a>, <a href="#curl-errors">curl: (22) The requested URL returned error</a></li>
     </ul>
@@ -70,6 +71,7 @@ command -v &lt;name&gt; || echo missing</code></pre>
       <ul>
         <li>The script has no execute bit (<code>-rw-r--r--</code>)</li>
         <li>The file system is mounted <code>noexec</code>, as /tmp often is</li>
+        <li>A fixed file name in the shared /tmp that another user's job created first</li>
         <li>Writing to a file the shell cannot open, such as <code>sudo echo x &gt; /etc/file</code> (the redirection runs as you)</li>
       </ul>
       <h4>Confirm</h4>
@@ -80,7 +82,7 @@ id</code></pre>
       <p><code>chmod +x script.sh</code>. For <code>noexec</code> mounts run <code>bash script.sh</code> or move the script. For root-owned files use <code>echo x | sudo tee /etc/file</code>.</p>
       <h4>Prevent</h4>
       <p>Commit scripts with the execute bit (<code>git update-index --chmod=+x</code>) and keep them out of /tmp.</p>
-      <p class="note">Practise it: <a href="index.html#play/noexec">Permission denied</a> · <a href="index.html#play/sudoredirect">sudo and a redirect</a> · <a href="index.html#fix/permission-denied">Open in Troubleshoot</a></p>
+      <p class="note">Practise it: <a href="index.html#play/noexec">Permission denied</a> · <a href="index.html#play/sudoredirect">sudo and a redirect</a> · <a href="index.html#play/tmpname">A fixed name in /tmp</a> · <a href="index.html#fix/permission-denied">Open in Troubleshoot</a></p>
     </section>
     <section class="card problem" id="no-such-file">
       <h3>No such file or directory</h3>
@@ -352,6 +354,25 @@ ls -l /bin/sh</code></pre>
       <h4>Prevent</h4>
       <p>Use UPPER_SNAKE_CASE for environment variables.</p>
       <p class="note"><a href="index.html#fix/not-valid-identifier">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="ifs-changed">
+      <h3>Words no longer split after changing IFS</h3>
+      <pre class="err-line"><code>restart-svc: unknown service 'nginx redis worker'</code></pre>
+      <h4>Symptom</h4>
+      <p>After some CSV parsing, a list of names arrives as one word, or paths are split at commas.</p>
+      <h4>Cause</h4>
+      <p><code>IFS=,</code> on its own line changes word splitting for the rest of the script: spaces stop separating words.</p>
+      <ul>
+        <li><code>IFS=,</code> (or IFS=$'\n') set globally to parse one line</li>
+        <li>Forgetting to restore IFS</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>printf '%q\n' &quot;$IFS&quot;</code></pre>
+      <h4>Fix</h4>
+      <p>Set IFS only for the command that needs it: <code>IFS=, read -r a b &lt;&lt;&lt; &quot;$line&quot;</code>. Use arrays for lists.</p>
+      <h4>Prevent</h4>
+      <p>Never change IFS globally; if you must, do it in a function with <code>local IFS</code>.</p>
+      <p class="note">Practise it: <a href="index.html#play/ifsreset">IFS changed for the whole script</a> · <a href="index.html#fix/ifs-changed">Open in Troubleshoot</a></p>
     </section>
     <h2 class="stage-h">Tests</h2>
     <section class="card problem" id="unary-operator-expected">
@@ -666,6 +687,132 @@ bash -x &lt;script&gt;</code></pre>
       <h4>Prevent</h4>
       <p>Quote every variable that holds a path.</p>
       <p class="note">Practise it: <a href="index.html#play/spaces">Spaces in a path</a> · <a href="index.html#play/forls">for f in $(ls)</a> · <a href="index.html#fix/cannot-stat">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="date-invalid">
+      <h3>date: invalid date</h3>
+      <pre class="err-line"><code>date: invalid date 'notAfter=Nov 15 12:00:00 2026 GMT'</code></pre>
+      <h4>Symptom</h4>
+      <p>Date arithmetic produces nonsense, such as a certificate that expires in -20756 days.</p>
+      <h4>Cause</h4>
+      <p><code>date -d</code> could not parse the text, so the command substitution was empty and the arithmetic used nothing.</p>
+      <ul>
+        <li>A label in front of the date (<code>notAfter=</code>)</li>
+        <li>A format GNU date does not read, or BSD date on macOS (<code>date -j -f</code>)</li>
+        <li>A carriage return at the end</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>printf '%q\n' &quot;$end&quot;
+date -d &quot;$end&quot; +%s</code></pre>
+      <h4>Fix</h4>
+      <p>Strip labels first (<code>${end#notAfter=}</code>), and check the result: <code>ts=$(date -d &quot;$end&quot; +%s) || exit 1</code>.</p>
+      <h4>Prevent</h4>
+      <p>Validate parsed values before arithmetic; a failed <code>$( )</code> inside <code>$(( ))</code> does not stop the script.</p>
+      <p class="note">Practise it: <a href="index.html#play/certexpiry">date: invalid date</a> · <a href="index.html#fix/date-invalid">Open in Troubleshoot</a></p>
+    </section>
+    <h2 class="stage-h">Jobs and signals</h2>
+    <section class="card problem" id="background-status-lost">
+      <h3>A failed background job did not fail the script</h3>
+      <pre class="err-line"><code>upload-region: us: 403 Forbidden ... and the script exits 0</code></pre>
+      <h4>Symptom</h4>
+      <p>Jobs started with <code>&amp;</code> fail, yet the script reports success and exits 0, even with <code>set -e</code>.</p>
+      <h4>Cause</h4>
+      <p>A background job's exit status only comes back through <code>wait PID</code> or <code>wait -n</code>. <code>wait</code> with no arguments always returns 0, and <code>set -e</code> never sees background jobs.</p>
+      <ul>
+        <li><code>cmd &amp; ... wait</code> with no PIDs</li>
+        <li>Not saving <code>$!</code> after each job</li>
+        <li>Expecting <code>set -e</code> to cover jobs</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>cmd &amp; p=$!; wait &quot;$p&quot;; echo $?
+jobs -l</code></pre>
+      <h4>Fix</h4>
+      <p>Save each PID (<code>pids+=($!)</code>) and wait for each one: <code>for p in &quot;${pids[@]}&quot;; do wait &quot;$p&quot; || failed=1; done</code>, then exit non-zero if any failed.</p>
+      <h4>Prevent</h4>
+      <p>Never use bare <code>wait</code> where failures matter; for many jobs use <code>xargs -P</code>, whose exit status (123) reports a failure.</p>
+      <p class="note">Practise it: <a href="index.html#play/parallelfail">A failed background job is lost</a> · <a href="index.html#fix/background-status-lost">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="wait-not-child">
+      <h3>wait: pid is not a child of this shell</h3>
+      <pre class="err-line"><code>./run.sh: line 7: wait: pid 4123 is not a child of this shell</code></pre>
+      <h4>Symptom</h4>
+      <p><code>wait</code> returns 127 straight away.</p>
+      <h4>Cause</h4>
+      <p>A shell can only wait for processes it started itself. The PID belongs to another shell, a subshell, or a process started by a different script.</p>
+      <ul>
+        <li>The job was started inside <code>( )</code>, a pipeline or <code>$( )</code>, so a subshell owns it</li>
+        <li>The PID came from a file or from <code>pgrep</code></li>
+        <li>The job was already waited for</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>jobs -l
+echo $!</code></pre>
+      <h4>Fix</h4>
+      <p>Start the job in the same shell that waits for it, and keep <code>$!</code> right after starting it. To wait for an unrelated process, poll with <code>while kill -0 &quot;$pid&quot;; do sleep 1; done</code>.</p>
+      <h4>Prevent</h4>
+      <p>Keep job control in one place: start, record and wait in the same function.</p>
+      <p class="note">Practise it: <a href="index.html#play/parallelfail">A failed background job is lost</a> · <a href="index.html#fix/wait-not-child">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="terminated">
+      <h3>Terminated</h3>
+      <pre class="err-line"><code>Terminated</code></pre>
+      <h4>Symptom</h4>
+      <p>A script or job stops part way and the shell prints Terminated (exit status 143), Hangup (129) or Killed (137).</p>
+      <h4>Cause</h4>
+      <p>A signal ended it: TERM from <code>kill</code>, <code>systemctl stop</code> or <code>timeout</code>; HUP when the terminal or SSH session went away; KILL from the OOM killer or <code>kill -9</code>. Its cleanup only ran if it had a trap.</p>
+      <ul>
+        <li>systemd stopping or restarting the service</li>
+        <li>The SSH session ending for a job started with <code>&amp;</code></li>
+        <li>A <code>timeout</code> limit</li>
+        <li>The out-of-memory killer (Killed, 137)</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>journalctl -u &lt;service&gt; | tail
+dmesg | grep -i 'killed process'
+echo $?</code></pre>
+      <h4>Fix</h4>
+      <p>Clean up in <code>trap '...' EXIT</code> (bash runs it on TERM, HUP and INT too), run long work with <code>nohup</code>, <code>setsid</code>, tmux or a systemd unit, and give it the memory it needs.</p>
+      <h4>Prevent</h4>
+      <p>Assume any script can be stopped at any line: register cleanup as soon as you create something, and make reruns safe.</p>
+      <p class="note">Practise it: <a href="index.html#play/trapterm">A stale lock after a stop</a> · <a href="index.html#play/nohup">The job died with the SSH session</a> · <a href="index.html#fix/terminated">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="nohup-ignoring-input">
+      <h3>nohup: ignoring input and appending output to 'nohup.out'</h3>
+      <pre class="err-line"><code>nohup: ignoring input and appending output to 'nohup.out'</code></pre>
+      <h4>Symptom</h4>
+      <p>nohup prints this and the command's output goes to a file instead of the terminal.</p>
+      <h4>Cause</h4>
+      <p>Not an error. Output to a terminal would be lost when the session ends, so nohup writes it to nohup.out in the current directory (or $HOME).</p>
+      <ul>
+        <li>Running <code>nohup cmd</code> without redirecting its output</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>tail nohup.out</code></pre>
+      <h4>Fix</h4>
+      <p>Choose where output goes: <code>nohup ./job.sh &gt; job.log 2&gt;&amp;1 &amp;</code>.</p>
+      <h4>Prevent</h4>
+      <p>Always redirect output of long-running jobs to a named log file.</p>
+      <p class="note">Practise it: <a href="index.html#play/nohup">The job died with the SSH session</a> · <a href="index.html#fix/nohup-ignoring-input">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="timeout-124">
+      <h3>Exit status 124 from timeout</h3>
+      <pre class="err-line"><code>curl: (28) Operation timed out after 10000 milliseconds with 0 bytes received</code></pre>
+      <h4>Symptom</h4>
+      <p>A command run under <code>timeout</code> ends with status 124, or curl reports (28) Operation timed out; or, without a limit, a cron job never finishes and copies pile up.</p>
+      <h4>Cause</h4>
+      <p>The command took longer than its limit. <code>timeout</code> sent it TERM and returned 124; <code>curl -m</code> gave up with 28. Without a limit, network calls can wait for a very long time.</p>
+      <ul>
+        <li>A server that accepts connections and never answers</li>
+        <li>A limit shorter than the work needs</li>
+        <li>No limit at all, so the job hangs</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>time &lt;command&gt;
+timeout 10 &lt;command&gt;; echo $?</code></pre>
+      <h4>Fix</h4>
+      <p>Give every network call a limit (<code>timeout 10 cmd</code> or <code>curl -m 10</code>) and treat 124 as a failure: <code>|| { echo 'timed out' &gt;&amp;2; exit 1; }</code>.</p>
+      <h4>Prevent</h4>
+      <p>Put a time limit on everything a cron job calls, and on the job itself.</p>
+      <p class="note">Practise it: <a href="index.html#play/timeout">A check that hangs for an hour</a> · <a href="index.html#fix/timeout-124">Open in Troubleshoot</a></p>
     </section>
     <h2 class="stage-h">Exit status</h2>
     <section class="card problem" id="exit-status-codes">

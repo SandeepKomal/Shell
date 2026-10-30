@@ -72,6 +72,14 @@ const CASES = {
   sshloop: { fix: [["ssh \"$host\" uptime", "ssh -n \"$host\" uptime"]], wrong: [[["while read -r host; do", "while read -r host || [[ -n $host ]]; do"]], [["ssh \"$host\" uptime", "ssh $host uptime"]]] },
   curlfail: { fix: [["curl -s", "curl -fsS"]], wrong: [[["curl -s", "curl -sS"]], [["curl -s", "curl -s --retry 3"]]] },
   ntest: { fix: [["[ -n $API_KEY ]", "[ -n \"$API_KEY\" ]"]], wrong: [[["[ -n $API_KEY ]", "[ -n ${API_KEY} ]"]], [["[ -n $API_KEY ]", "[ -n $API_KEY ] 2>/dev/null"]], ["export API_KEY=k-123"]] },
+  parallelfail: { fix: [["  upload-region \"$region\" &\ndone\nwait\n", "  upload-region \"$region\" &\n  pids+=($!)\ndone\nfor p in \"${pids[@]}\"; do wait \"$p\"; done\n"]], wrong: [[["wait\n", "wait || exit 1\n"]], [["  upload-region \"$region\" &", "  upload-region \"$region\""]], [["wait\n", "wait -n\n"]]] },
+  xargsp: { fix: [["xargs -0 -n 1", "xargs -0 -n 1 -P 4"]], wrong: [[["make-thumbnail\n", "make-thumbnail &\n"]], [["-n 1", "-n 8 -P 8"]]] },
+  timeout: { fix: [["status=$(curl -fsS http://legacy.internal/status)", "status=$(timeout 10 curl -fsS http://legacy.internal/status) || { echo \"legacy did not answer\" >&2; exit 1; }"]], wrong: [[["$(curl", "$(timeout 10 curl"]], [["curl -fsS", "curl --retry 3 -fsS"]], [["status=$(curl -fsS http://legacy.internal/status)", "status=$(curl -fsS http://legacy.internal/status &)"]]] },
+  trapterm: { fix: ["rmdir /var/lock/sync.d", ["fi\nsync-batch", "fi\ntrap 'rmdir \"$LOCK\"' EXIT\nsync-batch"]], wrong: [[["fi\nsync-batch", "fi\ntrap 'rmdir \"$LOCK\"' INT\nsync-batch"]], [["LOCK=/var/lock/sync.d\n", "LOCK=/var/lock/sync.d\nrm -rf \"$LOCK\"\n"]], ["rmdir /var/lock/sync.d"]] },
+  nohup: { fix: ["nohup ./migrate.sh > migrate.log 2>&1 &"], wrong: [["./migrate.sh &"], ["./migrate.sh > migrate.log 2>&1 &"], ["./migrate.sh"], ["./migrate.sh & sleep 1; kill %1"]] },
+  tmpname: { fix: [["OUT=/tmp/report.txt", "OUT=$(mktemp)\ntrap 'rm -f \"$OUT\"' EXIT"]], wrong: [[["OUT=/tmp/report.txt\n", "OUT=/tmp/report.txt\nrm -f \"$OUT\"\n"]], [["> \"$OUT\"", ">> \"$OUT\""]]] },
+  ifsreset: { fix: [["IFS=,\nread -r host port", "IFS=, read -r host port"]], wrong: [[["for svc in $SERVICES", "for svc in \"$SERVICES\""]], [["IFS=,\n", "unset IFS\n"]]] },
+  certexpiry: { fix: [["end=$(openssl x509 -enddate -noout -in /etc/ssl/shop.pem)\n", "end=$(openssl x509 -enddate -noout -in /etc/ssl/shop.pem)\nend=${end#notAfter=}\n"]], wrong: [[["date -d \"$end\"", "date -d \"${end}\""]], [["-in /etc/ssl/shop.pem)", "-in /etc/ssl/shop.pem | cut -d= -f1)"]]] },
   export: { fix: [["DEPLOY_ENV=staging", "export DEPLOY_ENV=staging"]], wrong: [["export DEPLOY_ENV=staging"], [["DEPLOY_ENV=staging", "declare DEPLOY_ENV=staging"]]] }
 };
 

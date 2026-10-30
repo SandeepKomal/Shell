@@ -91,6 +91,13 @@ cat <<-EOF
   `touch b.log a.log "c d.log"; for f in *.log; do echo "[$f]"; done; for f in $(ls *.log); do echo "<$f>"; done; echo *.log`,
   `x="*"; touch q1 q2; echo $x | head -c 40; echo; echo "$x"`,
   `eval 'y=5; echo "eval $y"'; type cd; type -t ls; command -v nonexistent || echo "not found $?"`,
+  // Background jobs, wait, timeout, signals and traps
+  `false & p=$!; wait $p; echo "w=$?"; wait; echo "all=$?"; wait 99999; echo "x=$?"; (exit 3) & wait -n; echo "n=$?"`,
+  `sleep 0.2 & jobs; wait; jobs; echo done`,
+  `timeout 1 sleep 3; echo "t=$?"; timeout 2 true; echo "ok=$?"; timeout x true; echo "bad=$?"`,
+  `trap 'echo cleaning' INT TERM; trap; trap - INT; trap`,
+  `date -d "Nov 15 12:00:00 2026 GMT" +%F; date -d "notAfter=Nov 15 12:00:00 2026 GMT" +%s; echo "rc=$?"`,
+  `IFS=, read -r a b <<< "x,y z"; echo "[$b]"; IFS=,; s="a b,c"; for w in $s; do echo "[$w]"; done`,
   // Utilities
   `printf 'b 2\\na 10\\nc 1\\na 10\\n' > d.txt; sort d.txt; sort -k2 -n d.txt; sort -u d.txt | wc -l; sort d.txt | uniq -c; cut -d' ' -f2 d.txt | sort -n | tail -1`,
   `printf '10.0.0.1 GET\\n10.0.0.15 POST\\n10.0.0.1 GET\\n' > a.log; grep -c "10.0.0.1" a.log; grep -cw "10.0.0.1" a.log; grep -F -x "10.0.0.1 GET" a.log | wc -l; grep -v GET a.log; grep -n POST a.log; grep -q nothing a.log; echo $?; grep x nofile; echo $?`,

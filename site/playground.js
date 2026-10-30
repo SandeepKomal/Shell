@@ -25,9 +25,11 @@
     "  if/elif/else, [ ] and [[ ]], for, for ((;;)), while, until, case, functions with local, return and $?",
     "  set -e -u -x -o pipefail, shopt nullglob, trap ... EXIT/ERR, exit, source, eval, getopts, read, printf",
     "  pipes, > >> < 2>&1 &> <<EOF <<'EOF' <<<, subshells ( ), exec 9>file",
-    "  programs: cat ls grep sed awk cut sort uniq wc head tail tr find xargs cp mv rm mkdir touch chmod",
-    "            basename dirname date sleep env printenv mktemp tee seq curl gzip tar flock file dos2unix bash sh",
-    "Not here: job control (& runs to completion first), aliases, >( ), interactive programs.",
+    "  background jobs: cmd &, $!, wait, wait PID, wait -n, jobs, disown, kill %N; traps on EXIT, ERR, INT, TERM",
+    "  programs: cat ls grep sed awk cut sort uniq wc head tail tr find xargs (-P) cp mv rm mkdir touch chmod",
+    "            basename dirname date sleep env printenv mktemp tee seq curl gzip tar flock timeout nohup file bash sh",
+    "Time is simulated: sleep and slow programs move the clock; background jobs run side by side on it.",
+    "Not here: fg, bg and Ctrl+Z, aliases, >( ), interactive programs.",
     "Playground commands: edit FILE (or nano, vi) · hint · reset · next · clear · history"
   ];
 

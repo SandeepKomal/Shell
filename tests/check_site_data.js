@@ -38,7 +38,7 @@ let total = 0;
 assert.deepStrictEqual(Object.keys(quiz).sort(), Q.levels.map((l) => l.id), "a quiz for every level and no other");
 for (const lv of Q.levels) {
   const items = quiz[lv.id];
-  assert.ok(items.length >= 4, `level ${lv.id} needs at least 4 questions, has ${items.length}`);
+  assert.ok(items.length >= 6, `level ${lv.id} needs at least 6 questions, has ${items.length}`);
   const seen = new Set();
   for (const item of items) {
     total++;
@@ -89,7 +89,14 @@ const PASTED = {
   "./deploy.sh: line 3: return: production: numeric argument required": "return-numeric",
   "./backup.sh: line 5: $LOG: ambiguous redirect": "ambiguous-redirect",
   "curl: (22) The requested URL returned error: 503": "curl-errors",
-  "works in terminal but fails in cron": "works-in-terminal-not-cron"
+  "works in terminal but fails in cron": "works-in-terminal-not-cron",
+  "Terminated": "terminated",
+  "my job exited with status 143": "terminated",
+  "./run.sh: line 7: wait: pid 4123 is not a child of this shell": "wait-not-child",
+  "nohup: ignoring input and appending output to 'nohup.out'": "nohup-ignoring-input",
+  "curl: (28) Operation timed out after 10000 milliseconds with 0 bytes received": "timeout-124",
+  "date: invalid date 'notAfter=Nov 15 12:00:00 2026 GMT'": "date-invalid",
+  "background job failed but script exit 0": "background-status-lost"
 };
 for (const [text, id] of Object.entries(PASTED)) {
   const top = window.SQSearch.rank(Q.doctor, text)[0];

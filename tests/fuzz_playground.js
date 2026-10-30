@@ -23,7 +23,7 @@ const WORDS = ["echo", "printf", "'%s\\n'", "%d", "cat", "ls", "-la", "-l", "gre
   "-o", "pipefail", "shopt", "-s", "nullglob", "trap", "'echo bye'", "EXIT", "ERR", "exit", "3", "return", "break", "continue", "source", ".", "eval", "exec", "9>/tmp/l", "flock", "-n", "9", "getopts",
   "ab:", "opt", "mapfile", "-t", "arr", "arr=(a b c)", "declare", "-a", "readonly", "let", "i=i+1", "true", "false", ":", "bash", "-c", "sh", "./report.sh", "./deploy.sh", "/home/dev/backup.sh",
   "curl", "-fsS", "https://api.internal/deploys", "http://localhost:8080/health", "gzip", "tar", "-czf", "x.tgz", "seq", "10", "tee", "mktemp", "file", "dos2unix", "sudo", "kill", "ps", "aux", "which",
-  "type", "command", "-v", "printenv", "PATH", "HOME", "IFS=,", "*", "?", "[a-z]*", "{a,b}", "{1..5}", "~/x", "*.log", "/etc/passwd", "hosts.txt", "\r", "\t", "#comment", "nano", "edit", "time", "expr"];
+  "type", "command", "-v", "wait", "-n", "jobs", "-l", "disown", "kill", "%1", "%2", "$!", "$$", "-TERM", "INT", "TERM", "HUP", "timeout", "0.5", "nohup", "setsid", "-P", "4", "sleep 2 &", "printenv", "PATH", "HOME", "IFS=,", "*", "?", "[a-z]*", "{a,b}", "{1..5}", "~/x", "*.log", "/etc/passwd", "hosts.txt", "\r", "\t", "#comment", "nano", "edit", "time", "expr"];
 
 const rounds = Number(process.argv[2]) || 4000;
 let n = 0;

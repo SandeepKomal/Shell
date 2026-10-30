@@ -8,8 +8,8 @@ The goal is simple: provide small scripts that solve common day-to-day operation
 
 [Shell Quest](https://sandeepkomal.github.io/Shell/) teaches bash scripting by fixing scripts that break the way real ones do. It is free, needs no account and sends nothing anywhere.
 
-- **Playground**: a bash shell over a small simulated server, with 54 incidents from quoting and exit codes to cron, locks, retries and secrets. Run the script, read the real error, edit it, run it again.
-- **Path**: 18 levels from a first script to production incidents, each with a lab that uses the scripts in this repository.
+- **Playground**: a bash shell over a small simulated server, with incidents from quoting and exit codes to cron, background jobs, locks, retries and secrets. Run the script, read the real error, edit it, run it again.
+- **Path**: levels from a first script to production incidents, each with a lab that uses the scripts in this repository.
 - **Script X-ray**: paste a script to see every line explained and risky lines flagged.
 - **Troubleshoot**: every common bash error with its cause, how to confirm it, the fix and how to prevent it; also as one plain page, [problems.html](https://sandeepkomal.github.io/Shell/problems.html).
 - **Quiz**, **Cheat sheet** and **Shell arch** (how bash runs a command line).

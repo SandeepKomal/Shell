@@ -20,6 +20,9 @@
   class CmdError { constructor(code, abort) { this.code = code; this.abort = abort; } }
   class AbortLine { constructor(code) { this.code = code; } } // an interactive shell drops the rest of the line
   class Limit { constructor(what) { this.what = what; } }
+  // A signal to a process. deadline marks the TERM that timeout sends when time runs out.
+  class Signal { constructor(sig, deadline) { this.sig = sig; this.deadline = !!deadline; } }
+  const SIGNUM = { HUP: 1, INT: 2, QUIT: 3, KILL: 9, TERM: 15 };
   class SyntaxErr { constructor(line, token, msg) { Object.assign(this, { line, token, msg }); } }
 
   // --- virtual file system ------------------------------------------------------
@@ -294,7 +297,16 @@
   class Parser {
     // posix: read as dash does, where [[ is an ordinary (missing) command.
     constructor(src, posix) { this.lx = new Lexer(src); this.buf = []; this.posix = posix; }
-    peek(k = 0) { while (this.buf.length <= k) this.buf.push(this.lx.token()); return this.buf[k]; }
+    peek(k = 0) {
+      while (this.buf.length <= k) {
+        this.lx.blanks();
+        const at = this.lx.i;
+        const t = this.lx.token();
+        t.at = at;
+        this.buf.push(t);
+      }
+      return this.buf[k];
+    }
     take() { this.peek(); return this.buf.shift(); }
     isOp(t, v) { return t.t === "op" && t.v === v; }
     isWord(t, v) { return t.t === "word" && t.v === v; }
@@ -326,11 +338,15 @@
         if (stops) this.newlines();
         const t = this.peek();
         if (this.atStop(t, stops)) break;
+        const from = t.at;
         const node = this.andOr();
         const s = this.peek();
         let bg = false;
-        if (this.isOp(s, ";") || this.isOp(s, "&")) { this.take(); bg = s.v === "&"; }
-        else if (!(this.isOp(s, "\n") || this.atStop(s, stops))) this.fail(s);
+        if (this.isOp(s, ";") || this.isOp(s, "&")) {
+          this.take();
+          bg = s.v === "&";
+          if (bg) node.text = this.lx.s.slice(from, s.at).trim();
+        } else if (!(this.isOp(s, "\n") || this.atStop(s, stops))) this.fail(s);
         items.push({ node, bg });
       }
       if (!items.length) this.fail(this.peek());
@@ -1093,6 +1109,7 @@
       this.pid = o.pid || sys.newPid();
       this.io = null;
       this.optpos = 1;
+      this.jobs = [];
       for (const [k, v] of Object.entries(o.env || {})) this.vars.set(k, { value: v, exported: true });
       this.vars.set("IFS", { value: " \t\n" });
       this.vars.set("OPTIND", { value: "1" });
@@ -1267,14 +1284,44 @@
     execList(list, io) {
       let st = 0;
       for (const { node, bg } of list.items) {
-        if (bg) {
-          const sub = this.subshell();
-          sub.contain(() => sub.execAndOr(node, io), io);
-          this.lastBg = this.sys.newPid();
-          st = this.status = 0;
-        } else st = this.execAndOr(node, io);
+        if (bg) st = this.background(node, io);
+        else st = this.execAndOr(node, io);
       }
       return st;
+    }
+    // cmd &: the job runs now, on its own clock. The shell's clock does not
+    // move; wait moves it to when the job finished, as if they ran side by side.
+    background(node, io) {
+      const sys = this.sys;
+      const start = sys.fs.now;
+      const pid = sys.newPid();
+      const sub = this.subshell();
+      sub.pid = pid;
+      const first = node.parts[0].cmds[0];
+      const word = first.type === "simple" ? first.words[0] : "";
+      const live = this.jobs.filter((j) => !j.reaped);
+      const job = { n: live.length ? live[live.length - 1].n + 1 : 1, pid, cmd: node.text || "job", start, owner: this, protected: word === "nohup" || word === "setsid", interactive: this.interactive };
+      this.jobs.push(job);
+      sys.bg.push(job);
+      if (this.interactive) io.fds[2].write(`[${job.n}] ${pid}\n`);
+      try { job.status = sub.contain(() => sub.execAndOr(node, io), io); } catch (e) {
+        if (!(e instanceof Signal)) throw e;
+        job.status = 128 + (SIGNUM[e.sig] || 15);
+      }
+      job.end = sys.fs.now;
+      sys.fs.now = start;
+      this.lastBg = pid;
+      return (this.status = 0);
+    }
+    // The signal reaches this shell: run its trap, or end it.
+    receive(sig, io) {
+      const n = 128 + (SIGNUM[sig] || 15);
+      const trap = this.traps[sig];
+      if (trap === "") return n;
+      if (trap !== undefined) { this.exec(trap, io); return n; }
+      if (this.interactive && (sig === "TERM" || sig === "INT" || sig === "QUIT")) return 0; // an interactive shell ignores these
+      this.killedBy = sig;
+      throw new Exit(n);
     }
     execAndOr(node, io) {
       const last = node.parts.length - 1;
@@ -1555,7 +1602,7 @@
         else {
           const append = r.op === ">>" || r.op === "&>>";
           const n = fs.get(path);
-          if (System.isProtected(path) && this.scalar("USER") !== "root" && (!n || n.type !== "dir")) { this.complain(`${target}: Permission denied`, io); return null; }
+          if ((System.isProtected(path) && this.scalar("USER") !== "root" || System.othersFile(n, this.scalar("USER"))) && (!n || n.type !== "dir")) { this.complain(`${target}: Permission denied`, io); return null; }
           const e = n && n.type === "dir" ? "EISDIR" : append && n ? null : fs.write(path, "", false);
           if (e) { this.complain(`${target}: ${ERRNO[e]}`, io); return null; }
           if (!n && append) fs.write(path, "", false);
@@ -1874,6 +1921,8 @@
       this.pids = 4100;
       this.seed = 7;
       this.slept = [];
+      this.bg = [];
+      this.deadlines = [];
       this.netHits = {};
       this.locks = new Set(spec.locks || []);
       this.procs = (spec.procs || []).map((p) => ({ ...p }));
@@ -1899,7 +1948,7 @@
       for (const [p, f] of Object.entries(spec.files || {})) {
         dir(FS.parent(p));
         const o = typeof f === "string" ? { text: f } : f;
-        fs.nodes.set(p, { type: "file", text: o.text, mode: o.mode ?? (o.text.startsWith("#!") ? 0o755 : 0o644), mtime: o.mtime ?? EPOCH - 3600 });
+        fs.nodes.set(p, { type: "file", text: o.text, mode: o.mode ?? (o.text.startsWith("#!") ? 0o755 : 0o644), mtime: o.mtime ?? EPOCH - 3600, ...(o.owner ? { owner: o.owner } : {}) });
       }
       return fs;
     }
@@ -1912,6 +1961,17 @@
       return sh;
     }
     newPid() { return ++this.pids; }
+    // Time passes for the running command (sleep, a slow program). timeout's deadline cuts it short.
+    advance(seconds) {
+      const deadline = Math.min(Infinity, ...this.deadlines);
+      if (this.fs.now + seconds > deadline) { this.fs.now = deadline; throw new Signal("TERM", true); }
+      this.fs.now += seconds;
+    }
+    // The terminal goes away (an SSH session ends): SIGHUP kills the jobs still running, unless protected.
+    hangup() {
+      for (const j of this.bg) if (j.end > this.fs.now && !j.protected && !j.killed) { j.killed = true; j.status = 129; }
+    }
+    running() { return this.bg.filter((j) => j.end > this.fs.now && !j.killed); }
     rootPid(sh) { while (sh.parent) sh = sh.parent; return sh.pid; }
     random() { this.seed = (this.seed * 1103515245 + 12345) % 2147483648; return this.seed; }
     emit(fd, s) {
@@ -1937,6 +1997,7 @@
           this.out.push([2, e.what === "steps" ? `playground: stopped after ${STEP_LIMIT} commands; is there a loop that never ends?\n` : "playground: stopped: too much output\n"]);
           this.term.status = 130;
         } else if (e instanceof Return || e instanceof Loop) this.term.status = 1;
+        else if (e instanceof Signal) { this.out.push([2, "Terminated\n"]); this.term.status = 143; }
         else throw e;
       }
       return this.lines();
@@ -1980,7 +2041,10 @@
     execFile(node, argv, env, cwd, io, caller) {
       if (node.bin) {
         const fn = this.bins[node.bin] || System.utils[node.bin];
-        return fn(new Ctx(this, argv, env, cwd, io, caller)) | 0;
+        try { return fn(new Ctx(this, argv, env, cwd, io, caller)) | 0; } catch (e) {
+          if (!(e instanceof Signal) || e.deadline) throw e;
+          return caller.receive(e.sig, io);
+        }
       }
       const text = node.text;
       let posix = caller.posix;
@@ -2006,11 +2070,12 @@
     }
     runScript(text, o) {
       const sh = new Shell(this, { env: o.env, cwd: o.cwd, args: o.args, arg0: o.argv0, file: o.file || o.argv0, posix: o.posix });
-      sh.parent = o.caller;
       for (const f of o.flags || []) for (const c of f.slice(1)) if (c in sh.opts) sh.opts[c] = true;
       sh.parseOnly = !!o.parseOnly;
       sh.io = o.io;
-      return sh.main(text, o.io);
+      const st = sh.main(text, o.io);
+      if (sh.killedBy && o.caller && o.caller.tty) o.io.fds[2].write(sh.killedBy === "HUP" ? "Hangup\n" : "Terminated\n");
+      return st;
     }
   }
 
@@ -2026,7 +2091,7 @@
     path(p) { return FS.norm(this.cwd, p); }
     // True (after the usual message) when this user may not change p.
     denied(p, msg, why = "Permission denied") {
-      if (this.env.USER === "root" || !System.isProtected(p)) return false;
+      if (this.env.USER === "root" || !(System.isProtected(p) || System.othersFile(this.fs.get(p), this.env.USER))) return false;
       this.fail(`${msg}: ${why}`);
       return true;
     }
@@ -2079,8 +2144,10 @@
 
   // Only root may change system directories; everything else in this world is the dev user's.
   System.isProtected = (p) => /^\/(etc|usr|root|boot)(\/|$)/.test(p);
+  // A file another user owns and has not made writable for everyone.
+  System.othersFile = (n, user) => !!n && !!n.owner && n.owner !== (user || "dev") && user !== "root" && !(n.mode & 0o002);
 
   System.utils = {};
   Shell.builtins = {};
-  root.ShellSim = { FS, Shell, System, Ctx, Parser, Lexer, wordParts, Reader, Buf, Null, evalArith, testArgs, TestErr, globToRe, quoteTrace, braceExpand, ansi, EPOCH, HOME, DEFAULT_PATH, Exit, Return, Loop, CmdError, ERRNO, KEYWORDS, NAME, byteOrder };
+  root.ShellSim = { FS, Shell, System, Ctx, Parser, Lexer, wordParts, Reader, Buf, Null, evalArith, testArgs, TestErr, globToRe, quoteTrace, braceExpand, ansi, EPOCH, HOME, DEFAULT_PATH, Exit, Return, Loop, CmdError, Signal, SIGNUM, ERRNO, KEYWORDS, NAME, byteOrder };
 })(typeof window !== "undefined" ? window : globalThis);

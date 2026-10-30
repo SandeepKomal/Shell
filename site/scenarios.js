@@ -1427,18 +1427,280 @@
         if ((set.text("/var/tmp/deployed") || "") !== "k-123\n") return bad("API_KEY set", "does not deploy");
         return ok("deploy.sh", "refuses without a key");
       }
+    },
+    {
+      id: "parallelfail",
+      title: "A failed background job is lost",
+      level: "14",
+      story: "upload-all.sh pushes the release to three regions in parallel. The us upload has been failing with 403 for two days; the script says all regions uploaded every time.",
+      goal: "Keep the uploads parallel, and make the script exit non-zero when any of them fails.",
+      done: "Every job's status is checked.",
+      file: `${H}/upload-all.sh`,
+      files: { [`${H}/upload-all.sh`]: `#!/usr/bin/env bash\nset -euo pipefail\nfor region in eu us ap; do\n  upload-region "$region" &\ndone\nwait\necho "all regions uploaded"\n` },
+      bins: {
+        "upload-region": (c) => {
+          c.sys.advance(20);
+          if (c.args[0] === "us" && !c.sys.spec.allOk) { c.err("upload-region: us: 403 Forbidden: token expired for bucket releases-us\n"); return 1; }
+          c.out(`uploaded to ${c.args[0]}\n`);
+          return 0;
+        }
+      },
+      hints: [
+        "Run ./upload-all.sh; echo $?. The us job fails, and the script still exits 0.",
+        "wait with no arguments always returns 0, and set -e never sees a background job's status.",
+        "Save each $! and wait for each one: pids+=($!) in the loop, then for p in \"${pids[@]}\"; do wait \"$p\" || failed=1; done; exit on failed."
+      ],
+      lesson: "A background job's exit status only reaches you through wait PID (or wait -n). Plain wait returns 0 whatever happened.",
+      tries: ["./upload-all.sh", "echo $?"],
+      check(sys) {
+        const failing = trial(this, sys, "./upload-all.sh");
+        const good = trial(this, sys, "./upload-all.sh", { spec: { allOk: true } });
+        if (failing.status === 0) return bad("us upload failing", "the script exits 0");
+        if (good.status !== 0) return verdict("all uploads working", good, false);
+        const took = good.fs.now - EPOCH;
+        if (took > 30) return bad("all uploads working", `took ${took}s: the uploads no longer run in parallel`);
+        return ok("upload-all.sh", "parallel, and fails when one upload fails");
+      }
+    },
+    {
+      id: "xargsp",
+      title: "One at a time with xargs",
+      level: "16",
+      story: "The thumbnail job must finish inside its 30-second slot before the next batch arrives. It takes 80 seconds on 4 idle CPUs.",
+      goal: "Make thumbs.sh finish all eight thumbnails within 30 seconds, and only then say done.",
+      done: "The work runs in parallel.",
+      file: `${H}/thumbs.sh`,
+      files: {
+        [`${H}/thumbs.sh`]: `#!/usr/bin/env bash\nset -euo pipefail\nmkdir -p /srv/thumbs\nfind /srv/images -name '*.png' -print0 | xargs -0 -n 1 make-thumbnail\necho "thumbnails done"\n`,
+        ...Object.fromEntries(["a", "b", "c", "d", "e", "f", "g", "h"].map((x) => [`/srv/images/${x}.png`, "png"]))
+      },
+      bins: {
+        "make-thumbnail": (c) => {
+          for (const f of c.args) {
+            c.sys.advance(10);
+            c.fs.write(`/srv/thumbs/${f.split("/").pop()}`, "thumb");
+          }
+          return 0;
+        }
+      },
+      hints: [
+        "Run time ./thumbs.sh; each make-thumbnail takes 10 seconds and they run one after another. nproc says how many CPUs there are.",
+        "xargs can run several commands at once. Putting the whole pipeline in the background with & only makes the script say done too early.",
+        "Add -P: xargs -0 -n 1 -P 4 make-thumbnail runs four at a time."
+      ],
+      lesson: "xargs -P N runs N commands in parallel; -n 1 gives each one file. Match N to the CPUs (nproc) or the service's limits.",
+      tries: ["./thumbs.sh", "nproc", "ls /srv/thumbs"],
+      check(sys) {
+        const r = trial(this, sys, "./thumbs.sh");
+        const thumbs = r.fs.list("/srv/thumbs");
+        if (thumbs.length < 8) return verdict("./thumbs.sh", r, false);
+        if (thumbs.some((t) => r.fs.get(`/srv/thumbs/${t}`).mtime > r.fs.now)) return bad("./thumbs.sh", "says done before the thumbnails exist");
+        const took = r.fs.now - EPOCH;
+        return took <= 30 ? ok("./thumbs.sh", `8 thumbnails in ${took}s`) : bad("./thumbs.sh", `takes ${took}s`);
+      }
+    },
+    {
+      id: "timeout",
+      title: "A check that hangs for an hour",
+      level: "14",
+      story: "The legacy status check runs every minute from cron. Since the legacy server started hanging, dozens of copies pile up, each waiting forever for an answer.",
+      goal: "Make check-legacy.sh give up within 30 seconds and exit non-zero when legacy does not answer.",
+      done: "The check has a time limit.",
+      file: `${H}/check-legacy.sh`,
+      files: { [`${H}/check-legacy.sh`]: `#!/usr/bin/env bash\nstatus=$(curl -fsS http://legacy.internal/status)\necho "legacy says: $status"\n` },
+      net: { "http://legacy.internal/status": "hang" },
+      hints: [
+        "Run time ./check-legacy.sh. curl has no overall time limit by default; here the network gave up after an hour.",
+        "Limit it: timeout 10 curl ... (exit status 124 when time runs out) or curl -m 10. Then make the failure count.",
+        "status=$(timeout 10 curl -fsS http://legacy.internal/status) || { echo \"legacy did not answer\" >&2; exit 1; }"
+      ],
+      lesson: "Anything that talks to the network needs a time limit: timeout N cmd (124 on expiry) or the tool's own, like curl -m.",
+      tries: ["./check-legacy.sh", "time curl -fsS -m 5 http://legacy.internal/status"],
+      check(sys) {
+        const hung = trial(this, sys, "./check-legacy.sh");
+        const fine = trial(this, sys, "./check-legacy.sh", { spec: { net: { "http://legacy.internal/status": { status: 200, body: "ok" } } } });
+        const took = hung.fs.now - EPOCH;
+        if (took > 30) return bad("legacy hanging", `waits ${took}s`);
+        if (hung.status === 0) return bad("legacy hanging", "exits 0 without an answer");
+        if (!/legacy says: ok/.test(fine.out) || fine.status) return verdict("legacy answering", fine, false);
+        return ok("check-legacy.sh", `gives up after ${took}s`);
+      }
+    },
+    {
+      id: "trapterm",
+      title: "A stale lock after a stop",
+      level: "10",
+      story: "systemd stopped the sync during last night's deploy. Since then every run says another sync is running, and nothing is.",
+      goal: "Make sync.sh remove its lock however it ends, including when it is stopped with SIGTERM. (Clear the stale lock with rmdir first, as you would on the server.)",
+      done: "The lock goes away on TERM too.",
+      file: `${H}/sync.sh`,
+      files: { [`${H}/sync.sh`]: `#!/usr/bin/env bash\nLOCK=/var/lock/sync.d\nif ! mkdir "$LOCK" 2>/dev/null; then\n  echo "another sync is running" >&2\n  exit 1\nfi\nsync-batch\nrmdir "$LOCK"\necho "sync done"\n` },
+      dirs: ["/var/lock/sync.d"],
+      bins: {
+        "sync-batch": (c) => {
+          c.out("syncing batch 1 of 3\n");
+          c.sys.advance(60);
+          if (c.sys.spec.term) throw new root.ShellSim.Signal("TERM");
+          c.out("synced 3 batches\n");
+          return 0;
+        }
+      },
+      hints: [
+        "ls -d /var/lock/sync.d: the lock from the stopped run is still there. The script only removes it on its last line.",
+        "systemctl stop sends SIGTERM. The script dies in sync-batch and never reaches rmdir.",
+        "Right after mkdir succeeds: trap 'rmdir \"$LOCK\"' EXIT. Bash runs the EXIT trap when TERM ends the script too. Then rmdir /var/lock/sync.d once to clear today's stale lock."
+      ],
+      lesson: "Register cleanup with trap ... EXIT as soon as you create the thing to clean up; bash runs it on exit, errors and SIGTERM. SIGKILL cannot be trapped, so locks that must never go stale use flock.",
+      tries: ["./sync.sh", "ls -ld /var/lock/sync.d", "rmdir /var/lock/sync.d"],
+      check(sys) {
+        const clear = (t) => t.fs.remove("/var/lock/sync.d");
+        const stopped = trial(this, sys, "./sync.sh", { spec: { term: true }, setup: clear });
+        if (stopped.fs.get("/var/lock/sync.d")) return bad("stopped with SIGTERM", "the lock is left behind");
+        stopped.sys.spec.term = false;
+        stopped.sys.run("./sync.sh");
+        if (!/sync done/.test(stopped.sys.stdout)) return bad("the next run", firstLine(stopped.sys.stderr) || "does not sync");
+        const busy = trial(this, sys, "./sync.sh");
+        if (busy.status === 0 || !busy.fs.get("/var/lock/sync.d")) return bad("while another sync holds the lock", "runs anyway");
+        return ok("sync.sh", "cleans its lock on TERM");
+      }
+    },
+    {
+      id: "nohup",
+      title: "The job died with the SSH session",
+      level: "14",
+      story: "You started the two-hour data migration over SSH with ./migrate.sh & and went home. The VPN dropped at 22:40, and so did the migration.",
+      goal: "Start ./migrate.sh from this terminal so that it keeps running after you log out.",
+      done: "The migration survives the end of the session.",
+      file: `${H}/migrate.sh`,
+      editable: [],
+      files: { [`${H}/migrate.sh`]: `#!/usr/bin/env bash\necho "migrating 48 million rows"\nmigrate-batch\necho "migration complete"\n` },
+      bins: { "migrate-batch": (c) => { c.sys.advance(7200); c.out("rows migrated: 48000000\n"); return 0; } },
+      hints: [
+        "Start it the old way, ./migrate.sh &, then jobs. When an SSH session ends, the shell sends SIGHUP to its jobs, and the default action of SIGHUP is to die.",
+        "Running it in the foreground holds the terminal for two hours; a plain & does not protect it, and nor does redirecting its output.",
+        "nohup ./migrate.sh > migrate.log 2>&1 & (or ./migrate.sh & then disown, or setsid). For long work, tmux or a systemd unit is better still."
+      ],
+      lesson: "Jobs of an interactive shell get SIGHUP when the session ends. nohup ignores it, disown makes the shell forget the job, setsid starts a new session; tmux and systemd-run keep work off your SSH session altogether.",
+      tries: ["./migrate.sh &", "jobs", "ps aux"],
+      check(sys) {
+        const jobs = sys.bg.filter((j) => /migrate\.sh/.test(j.cmd));
+        if (!jobs.length) return bad("migration", "not running in the background");
+        const running = jobs.filter((j) => j.end > sys.fs.now && !j.killed);
+        if (!running.length) return bad("migration", jobs.some((j) => j.killed) ? "it was killed" : "it already ended");
+        if (!running.some((j) => j.protected)) return bad("when you log out", "SIGHUP would kill it");
+        return ok("migration", "keeps running after you log out");
+      }
+    },
+    {
+      id: "tmpname",
+      title: "A fixed name in /tmp",
+      level: "13",
+      story: "The report job fails on the shared build server with /tmp/report.txt: Permission denied. Another team's job uses the same file name.",
+      goal: "Make report.sh work whoever else uses /tmp, without touching their file.",
+      done: "The script uses its own temporary file.",
+      file: `${H}/report.sh`,
+      files: {
+        [`${H}/report.sh`]: `#!/usr/bin/env bash\nset -euo pipefail\nOUT=/tmp/report.txt\necho "orders,1204" > "$OUT"\nupload-report "$OUT"\nrm -f "$OUT"\n`,
+        "/tmp/report.txt": { text: "ci team's report\n", owner: "ci", mode: 0o644 }
+      },
+      bins: { "upload-report": (c) => { const t = c.read(c.args[0] || ""); if (t === null) return 1; c.fs.write("/var/tmp/uploaded", t); c.out("report uploaded\n"); return 0; } },
+      hints: [
+        "Run ./report.sh, then ls -l /tmp/report.txt. Who owns it?",
+        "/tmp is shared and sticky: you cannot write or delete another user's file there. A fixed name also lets anyone plant a file or symlink for your script to write through.",
+        "Use a unique file: OUT=$(mktemp) and trap 'rm -f \"$OUT\"' EXIT."
+      ],
+      lesson: "Never use fixed names in /tmp. mktemp creates a new file only you can read, with a name nobody can predict.",
+      tries: ["./report.sh", "ls -l /tmp"],
+      check(sys) {
+        const r = trial(this, sys, "./report.sh");
+        if (r.text("/tmp/report.txt") !== "ci team's report\n") return bad("/tmp/report.txt", "the other team's file was changed");
+        return verdict("./report.sh", r, r.status === 0 && r.text("/var/tmp/uploaded") === "orders,1204\n", "uploads its own report");
+      }
+    },
+    {
+      id: "ifsreset",
+      title: "IFS changed for the whole script",
+      level: "05",
+      story: "A colleague added CSV parsing to the restart script. Now it tries to restart a service called nginx redis worker.",
+      goal: "Make restart.sh read the endpoint and restart nginx, redis and worker separately.",
+      done: "IFS only changes where it is needed.",
+      file: `${H}/restart.sh`,
+      files: {
+        [`${H}/restart.sh`]: `#!/usr/bin/env bash\nIFS=,\nread -r host port < endpoint.csv\necho "checking $host:$port"\nSERVICES="nginx redis worker"\nfor svc in $SERVICES; do\n  restart-svc "$svc"\ndone\n`,
+        [`${H}/endpoint.csv`]: "db.internal,5432\n"
+      },
+      bins: {
+        "restart-svc": (c) => {
+          const svc = c.args[0] || "";
+          if (!["nginx", "redis", "worker"].includes(svc)) { c.err(`restart-svc: unknown service '${svc}'\n`); return 1; }
+          c.out(`restarted ${svc}\n`);
+          return 0;
+        }
+      },
+      hints: [
+        "Run ./restart.sh. The read works; the loop does not.",
+        "IFS=, on its own line changes word splitting for everything after it: spaces no longer separate words, commas do.",
+        "Set IFS only for the read: IFS=, read -r host port < endpoint.csv."
+      ],
+      lesson: "Put IFS=... in front of the one command that needs it (IFS=, read ...). A global IFS change silently breaks every unquoted expansion after it.",
+      tries: ["./restart.sh", "cat endpoint.csv"],
+      check(sys) {
+        const r = trial(this, sys, "./restart.sh");
+        const n = ["nginx", "redis", "worker"].filter((x) => r.out.includes(`restarted ${x}`)).length;
+        if (!/checking db\.internal:5432/.test(r.out)) return bad("./restart.sh", "endpoint not read");
+        return n === 3 ? ok("./restart.sh", "restarts 3 services") : bad("./restart.sh", firstLine(r.err) || `restarts ${n} of 3`);
+      }
+    },
+    {
+      id: "certexpiry",
+      title: "date: invalid date",
+      level: "07",
+      story: "The certificate check should warn a month before expiry. It says the certificate expires in -20756 days, every day, so everyone ignores it. It expires in two weeks.",
+      goal: "Make cert-check.sh print the real number of days left.",
+      done: "The date is parsed.",
+      file: `${H}/cert-check.sh`,
+      files: {
+        [`${H}/cert-check.sh`]: `#!/usr/bin/env bash\nset -euo pipefail\nend=$(openssl x509 -enddate -noout -in /etc/ssl/shop.pem)\ndays=$(( ($(date -d "$end" +%s) - $(date +%s)) / 86400 ))\nif (( days < 30 )); then\n  echo "WARN: shop.pem expires in $days days"\nelse\n  echo "OK: shop.pem has $days days left"\nfi\n`,
+        "/etc/ssl/shop.pem": "-----BEGIN CERTIFICATE-----\n(practice certificate; the playground does not read its contents)\n-----END CERTIFICATE-----\n"
+      },
+      certs: { "/etc/ssl/shop.pem": "Nov 15 12:00:00 2026 GMT" },
+      bins: {
+        openssl: (c) => {
+          const at = c.args.indexOf("-in");
+          const file = at >= 0 ? c.args[at + 1] : null;
+          const date = file && (c.sys.spec.certs || {})[c.path(file)];
+          if (!date) { c.err(`Could not open file or uri for loading certificate from ${file}\n`); return 1; }
+          if (c.args.includes("-enddate")) c.out(`notAfter=${date}\n`);
+          return 0;
+        }
+      },
+      hints: [
+        "Run ./cert-check.sh and read the date error. Then run the openssl line on its own.",
+        "openssl prints notAfter=Nov 15 12:00:00 2026 GMT. date cannot parse the prefix, so the subtraction runs on an empty value.",
+        "Strip the prefix before parsing: end=${end#notAfter=}. (scripts/ssl_cert_expiry.sh in this repository does the same.)"
+      ],
+      lesson: "Check what a tool really prints before parsing it, and remove labels with ${var#prefix}. A failed $(...) inside $(( )) does not stop the script; it leaves nonsense.",
+      tries: ["./cert-check.sh", "openssl x509 -enddate -noout -in /etc/ssl/shop.pem"],
+      check(sys) {
+        const soon = trial(this, sys, "./cert-check.sh");
+        const later = trial(this, sys, "./cert-check.sh", { spec: { certs: { "/etc/ssl/shop.pem": "Jan  1 00:00:00 2027 GMT" } } });
+        if (!/^WARN: shop\.pem expires in 16 days$/m.test(soon.out) || soon.err) return verdict("expires Nov 15", soon, false);
+        if (!/^OK: shop\.pem has 62 days left$/m.test(later.out)) return bad("expires Jan 1", firstLine(later.out) || firstLine(later.err));
+        return ok("cert-check.sh", "16 days left");
+      }
     }
   ];
 
   // Easiest first, then by what goes wrong.
   const GROUPS = [
     ["Basics", ["noexec", "typo", "assign", "singlequotes", "math"]],
-    ["Quoting and expansion", ["spaces", "emptytest", "ntest", "globvar", "heredoc", "nounset", "dollarstar", "argstring"]],
+    ["Quoting and expansion", ["spaces", "emptytest", "ntest", "globvar", "heredoc", "nounset", "dollarstar", "argstring", "ifsreset"]],
     ["Exit codes and errors", ["statusover", "testcmd", "intcompare", "octal", "curlfail", "pipefail", "cdfail", "localmask", "arithexit", "trap"]],
     ["Loops and files", ["forls", "lastline", "pipesub", "sshloop", "nomatch", "extension", "findglob"]],
-    ["Text processing", ["sedslash", "uniqsort", "grepdot", "cutspaces", "grepset", "crlfdata", "slowloop"]],
+    ["Text processing", ["sedslash", "uniqsort", "grepdot", "cutspaces", "grepset", "crlfdata", "certexpiry", "slowloop"]],
     ["Functions and structure", ["funcreturn", "getopts", "nolocal", "sourcepath", "exitpipe"]],
-    ["Safety", ["rmempty", "logrotate", "lockfile", "retry", "secretleak", "evalinject", "sudoredirect"]],
+    ["Jobs and signals", ["parallelfail", "xargsp", "timeout", "trapterm", "nohup"]],
+    ["Safety", ["rmempty", "logrotate", "lockfile", "retry", "secretleak", "evalinject", "sudoredirect", "tmpname"]],
     ["Cron and environment", ["cronpath", "cronenv", "crlf", "noshebang", "export"]]
   ];
   const order = GROUPS.flatMap(([, ids]) => ids);

@@ -3,7 +3,7 @@
 "use strict";
 
 (function (root) {
-  const { FS, System, Shell, ERRNO, byteOrder, globToRe, printf, escapes } = root.ShellSim;
+  const { FS, System, Shell, Signal, ERRNO, byteOrder, globToRe, printf, escapes } = root.ShellSim;
   const U = System.utils;
   const lines = (text) => (text === "" ? [] : text.replace(/\n$/, "").split("\n"));
   const joinLines = (list) => (list.length ? list.join("\n") + "\n" : "");
@@ -40,6 +40,8 @@
       return now + Number(m[1]) * unit * (m[3] ? -1 : 1);
     }
     if ((m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(s))) return Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0)) / 1000;
+    // The form openssl and many logs print: Nov 15 12:00:00 2026 GMT
+    if ((m = /^([A-Z][a-z]{2})\s+(\d{1,2})\s+(\d{2}):(\d{2}):(\d{2})\s+(\d{4})(?:\s+(?:GMT|UTC))?$/.exec(s)) && MONTHS.includes(m[1])) return Date.UTC(+m[6], MONTHS.indexOf(m[1]), +m[2], +m[3], +m[4], +m[5]) / 1000;
     return null;
   }
   U.date = (c) => {
@@ -69,8 +71,8 @@
       if (!m) return c.usage(`invalid time interval '${a}'`);
       total += Number(m[1]) * { "": 1, s: 1, m: 60, h: 3600, d: 86400 }[m[2]];
     }
-    c.fs.now += Math.round(total);
     c.sys.slept.push(total);
+    c.sys.advance(Math.ceil(total));
     return 0;
   };
 
@@ -122,7 +124,7 @@
         const w = Math.max(1, ...entries.map((e) => String(o.h ? human(sizeOf(e.n)) : sizeOf(e.n)).length));
         for (const e of entries) {
           const size = String(o.h ? human(sizeOf(e.n)) : sizeOf(e.n)).padStart(w);
-          const who = owner(e.p);
+          const who = e.n.owner || owner(e.p);
           c.out(`${modeString(e.n)} ${e.n.type === "dir" ? 2 : 1} ${who} ${who} ${size} ${lsTime(e.n.mtime, c.fs.now)} ${lsName(e.name, tty)}${o.F && e.n.type === "dir" ? "/" : ""}\n`);
         }
       } else if (entries.length) {
@@ -222,7 +224,7 @@
       if (/(^|\/)\.\.?\/?$/.test(f)) { c.fail(`refusing to remove '.' or '..' directory: skipping '${f}'`); st = 1; continue; }
       const n = c.fs.get(p);
       if (!n) { if (!o.f) { c.fail(`cannot remove '${f}': No such file or directory`); st = 1; } continue; }
-      if (c.denied(p, `cannot remove '${f}'`)) { st = 1; continue; }
+      if (c.denied(p, `cannot remove '${f}'`, System.isProtected(p) ? "Permission denied" : "Operation not permitted")) { st = 1; continue; }
       if (n.type === "dir" && !rec) {
         if (o.d && !c.fs.list(p).length) { c.fs.remove(p); continue; }
         c.fail(`cannot remove '${f}': Is a directory`);
@@ -1380,12 +1382,13 @@
   }
   function runWith(c, text, o) {
     const sh = new Shell(c.sys, { env: c.env, cwd: c.cwd, args: o.args, arg0: o.argv0, file: o.file, posix: o.posix });
-    sh.parent = c.sh;
     for (const f of o.flags) for (const ch of f.slice(1)) if (ch in sh.opts) sh.opts[ch] = true;
     o.setOpts(sh);
     sh.parseOnly = o.parseOnly;
     sh.io = c.io;
-    return sh.main(text, c.io);
+    const st = sh.main(text, c.io);
+    if (sh.killedBy && c.sh && c.sh.tty) c.err(sh.killedBy === "HUP" ? "Hangup\n" : "Terminated\n");
+    return st;
   }
   U.bash = (c) => shellProgram(c, false);
   U.sh = (c) => shellProgram(c, true);
@@ -1402,6 +1405,7 @@
     let rep = null;
     let noEmpty = false;
     let nul = false;
+    let par = 1;
     let i = 0;
     for (; i < c.args.length; i++) {
       const a = c.args[i];
@@ -1411,7 +1415,8 @@
       else if (/^-I./.test(a)) rep = a.slice(2);
       else if (a === "-r" || a === "--no-run-if-empty") noEmpty = true;
       else if (a === "-0" || a === "--null") nul = true;
-      else if (a === "-P") i++;
+      else if (a === "-P") par = Math.max(1, Number(c.args[++i]) || 1);
+      else if (/^-P\d+$/.test(a)) par = Math.max(1, Number(a.slice(2)));
       else if (a === "-t") continue;
       else if (a[0] === "-" && a.length > 1) return c.usage(`invalid option -- '${a[1]}'`);
       else break;
@@ -1432,26 +1437,65 @@
     else if (!items.length) batches.push(cmd);
     else for (let k = 0; k < items.length; k += n) batches.push([...cmd, ...items.slice(k, k + n)]);
     let st = 0;
+    // -P N runs N commands at a time: each starts when a slot is free.
+    const slots = Array(par).fill(c.fs.now);
     for (const argv of batches) {
       const hit = c.sys.resolve(argv[0], c.env.PATH, c.cwd);
       if (!hit || !hit.n) { c.err(`xargs: ${argv[0]}: No such file or directory\n`); return 127; }
+      const k = slots.indexOf(Math.min(...slots));
+      c.fs.now = slots[k];
       const r = c.sys.execFile(hit.n, argv, c.env, c.cwd, c.io, c.sh);
+      slots[k] = c.fs.now;
       if (r === 255) { c.err(`xargs: ${argv[0]}: exited with status 255; aborting\n`); return 124; }
       if (r) st = 123;
     }
+    c.fs.now = Math.max(...slots);
     return st;
   };
+  // timeout DURATION COMMAND: TERM when the time is up, and exit status 124.
   U.timeout = (c) => {
-    const args = c.args.filter((a) => !/^-/.test(a));
-    if (args.length < 2) return c.usage("missing operand");
-    return c.run(args.slice(1));
+    const a = c.args.slice();
+    let kill = false;
+    let preserve = false;
+    while (a.length && a[0][0] === "-") {
+      const o = a.shift();
+      if (o === "-s" || o === "--signal") kill = /KILL|9/.test(a.shift() || "");
+      else if (o === "-k" || o === "--kill-after") a.shift();
+      else if (o === "--preserve-status") preserve = true;
+      else if (o === "--foreground" || o === "-v" || o === "--verbose") continue;
+      else return c.usage(`invalid option -- '${o.replace(/^-+/, "")}'`, 125);
+    }
+    if (a.length < 2) return c.usage(a.length ? `missing operand after '${a[0]}'` : "missing operand", 125);
+    const m = /^(\d+(?:\.\d+)?)([smhd]?)$/.exec(a[0]);
+    if (!m) return c.usage(`invalid time interval '${a[0]}'`, 125);
+    const limit = Number(m[1]) * { "": 1, s: 1, m: 60, h: 3600, d: 86400 }[m[2]];
+    const deadline = c.fs.now + limit;
+    c.sys.deadlines.push(deadline);
+    try { return c.run(a.slice(1)); } catch (e) {
+      if (!(e instanceof Signal) || !e.deadline || c.fs.now < deadline) throw e;
+      return preserve ? 143 : kill ? 137 : 124;
+    } finally { c.sys.deadlines.splice(c.sys.deadlines.indexOf(deadline), 1); }
   };
   U.time = (c) => {
     const st = c.args.length ? c.run(c.args) : 0;
     c.err("\nreal\t0m0.004s\nuser\t0m0.001s\nsys\t0m0.002s\n");
     return st;
   };
-  U.nohup = (c) => c.run(c.args);
+  // nohup: ignore SIGHUP, and keep output that would go to the terminal in nohup.out.
+  U.nohup = (c) => {
+    if (!c.args.length) return c.usage("missing operand", 125);
+    const io = { fds: { ...c.io.fds } };
+    if (c.io.fds[0] && c.io.fds[0].tty) io.fds[0] = new root.ShellSim.Reader("");
+    if (c.io.fds[1] && c.io.fds[1].tty) {
+      c.err("nohup: ignoring input and appending output to 'nohup.out'\n");
+      const p = c.path("nohup.out");
+      if (!c.fs.get(p)) c.fs.write(p, "");
+      io.fds[1] = { write: (s) => c.fs.write(p, s, true), path: p };
+      if (c.io.fds[2] && c.io.fds[2].tty) io.fds[2] = io.fds[1];
+    } else if (c.io.fds[0] && c.io.fds[0].tty) c.err("nohup: ignoring input\n");
+    return c.run(c.args, io);
+  };
+  U.setsid = (c) => (c.args.length ? c.run(c.args.filter((x, k) => !(k === 0 && x === "-f"))) : c.usage("missing operand"));
   U.true = () => 0;
   U.false = () => 1;
   U.echo = (c) => Shell.builtins.echo(c.sh, c.args, c.io);
@@ -1486,7 +1530,7 @@
     return 0;
   };
   U.ps = (c) => {
-    const procs = [...c.sys.procs, { pid: c.sh ? c.sys.rootPid(c.sh) : 4101, cmd: "-bash", user: "dev" }];
+    const procs = [...c.sys.procs, ...c.sys.running().map((j) => ({ pid: j.pid, cmd: j.cmd, user: "dev" })), { pid: c.sh ? c.sys.rootPid(c.sh) : 4101, cmd: "-bash", user: "dev" }];
     const full = c.args.some((a) => /aux|ef/.test(a));
     c.out(full ? "USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND\n" + procs.map((p) => `${(p.user || "dev").padEnd(8)} ${String(p.pid).padStart(7)}  0.0  0.1  ${p.cmd.length * 100 + 7000}  3400 ?        S    03:00   0:00 ${p.cmd}\n`).join("")
       : "    PID TTY          TIME CMD\n" + procs.map((p) => `${String(p.pid).padStart(7)} pts/0    00:00:00 ${p.cmd.split(" ")[0].split("/").pop()}\n`).join(""));
@@ -1725,9 +1769,10 @@
     for (let i = 0; i < c.args.length; i++) {
       const a = c.args[i];
       if (a === "-o" || a === "--output") o.out = c.args[++i];
+      else if (a === "-m" || a === "--max-time") o.max = Number(c.args[++i]) || 0;
       else if (a === "-w" || a === "--write-out") o.write = c.args[++i];
       else if (a === "--retry") o.retry = Number(c.args[++i]) || 0;
-      else if (["-m", "--max-time", "--connect-timeout", "-H", "--header", "-X", "--request", "-d", "--data", "-u", "--user", "--retry-delay", "--retry-max-time", "-A"].includes(a)) i++;
+      else if (["--connect-timeout", "-H", "--header", "-X", "--request", "-d", "--data", "-u", "--user", "--retry-delay", "--retry-max-time", "-A"].includes(a)) i++;
       else if (/^-[a-zA-Z]+$/.test(a)) { for (const ch of a.slice(1)) { if (ch in o) o[ch] = true; if (ch === "I") o.head = true; } }
       else if (a.startsWith("--")) { if (a === "--fail") o.f = true; if (a === "--silent") o.s = true; if (a === "--show-error") o.S = true; if (a === "--retry-all-errors") o.retry ||= 0; }
       else url = a;
@@ -1746,6 +1791,13 @@
       if (r === undefined) code = say(6, `Could not resolve host: ${host}`);
       else if (r === "refused") { code = say(7, `Failed to connect to ${host} port ${full.startsWith("https") ? 443 : 80} after 0 ms: Couldn't connect to server`); transient = true; }
       else if (r === "timeout") { code = say(28, `Connection timed out after 10001 milliseconds`); transient = true; }
+      else if (r === "hang") {
+        // The server accepts the connection and never answers. Without -m, curl waits as long as the network lets it.
+        const wait = o.max || 3600;
+        c.sys.advance(wait);
+        code = say(28, `Operation timed out after ${wait * 1000} milliseconds with 0 bytes received`);
+        transient = true;
+      }
       else {
         transient = r.status >= 500 || r.status === 429 || r.status === 408;
         if (o.f && r.status >= 400) code = say(22, `The requested URL returned error: ${r.status}`);
@@ -1758,8 +1810,8 @@
       if (code === 0 || !transient || attempt >= o.retry) return code;
       const wait = 2 ** attempt;
       if (!o.s) c.err(`Warning: Problem : HTTP error. Will retry in ${wait} seconds. ${o.retry - attempt} retries left.\n`);
-      c.fs.now += wait;
       c.sys.slept.push(wait);
+      c.sys.advance(wait);
     }
   };
   U.wget = (c) => c.fail("playground: use curl here", 1);

@@ -3,7 +3,7 @@
 "use strict";
 
 (function (root) {
-  const { FS, Shell, Exit, Return, Loop, testArgs, TestErr, ansi, quoteTrace, NAME, KEYWORDS, byteOrder } = root.ShellSim;
+  const { FS, Shell, Exit, Return, Loop, SIGNUM, testArgs, TestErr, ansi, quoteTrace, NAME, KEYWORDS, byteOrder } = root.ShellSim;
   const B = Shell.builtins;
   const say = (io, s) => io.fds[1].write(s);
 
@@ -440,7 +440,7 @@
   const SIGNALS = ["EXIT", "ERR", "HUP", "INT", "QUIT", "TERM", "USR1", "USR2", "DEBUG", "RETURN"];
   B.trap = (sh, args, io) => {
     if (!args.length || args[0] === "-p") {
-      for (const [sig, cmd] of Object.entries(sh.traps)) say(io, `trap -- ${quoteTrace(cmd).startsWith("'") ? quoteTrace(cmd) : `'${cmd}'`} ${sig}\n`);
+      for (const [sig, cmd] of Object.entries(sh.traps)) say(io, `trap -- ${quoteTrace(cmd).startsWith("'") ? quoteTrace(cmd) : `'${cmd}'`} ${["EXIT", "ERR", "DEBUG", "RETURN"].includes(sig) ? sig : "SIG" + sig}\n`);
       return 0;
     }
     if (args[0] === "-l") { say(io, SIGNALS.map((s, i) => `${i}) SIG${s}`).join(" ") + "\n"); return 0; }
@@ -490,7 +490,60 @@
     if (B[args[0]]) return B[args[0]](sh, args.slice(1), io);
     return sh.sys.spawn(args, sh.exportedEnv(), sh.cwd, io, sh);
   };
-  B.wait = () => 0;
+  // wait, wait PID, wait %N and wait -n over the shell's background jobs.
+  B.wait = (sh, args, io) => {
+    const live = () => sh.jobs.filter((j) => !j.reaped);
+    const reap = (j) => { j.reaped = true; if (j.end > sh.sys.fs.now) sh.sys.fs.now = j.end; return j.status; };
+    if (args[0] === "-n") {
+      const next = live().sort((a, b) => a.end - b.end)[0];
+      return next ? reap(next) : 127;
+    }
+    if (!args.length) { live().forEach(reap); return 0; }
+    let st = 0;
+    for (const a of args) {
+      const j = a.startsWith("%") ? sh.jobs.find((x) => String(x.n) === a.slice(1)) : sh.jobs.find((x) => String(x.pid) === a);
+      if (!j) { sh.complain(a.startsWith("%") ? `wait: ${a}: no such job` : `wait: pid ${a} is not a child of this shell`, io); st = 127; continue; }
+      st = reap(j);
+    }
+    return st;
+  };
+  B.jobs = (sh, args, io) => {
+    const list = sh.jobs.filter((j) => !j.reaped);
+    list.forEach((j, k) => {
+      if (args.includes("-p")) { say(io, j.pid + "\n"); return; }
+      const state = j.killed ? "Hangup" : j.end > sh.sys.fs.now ? "Running" : j.status ? `Exit ${j.status}` : "Done";
+      const mark = k === list.length - 1 ? "+" : k === list.length - 2 ? "-" : " ";
+      say(io, `[${j.n}]${mark}  ${args.includes("-l") ? j.pid + " " : ""}${state.padEnd(24)}${j.cmd}${state === "Running" ? " &" : ""}\n`);
+      if (state !== "Running") j.reaped = true;
+    });
+    return 0;
+  };
+  // disown: the shell forgets the job, so it does not send it SIGHUP when the session ends.
+  B.disown = (sh, args, io) => {
+    const ids = args.filter((a) => a !== "-h" && a !== "-a");
+    const live = sh.jobs.filter((j) => !j.reaped);
+    const picked = args.includes("-a") ? live : ids.length ? ids.map((a) => live.find((j) => String(j.n) === a.replace(/^%/, "") || String(j.pid) === a)) : [live[live.length - 1]];
+    if (picked.some((j) => !j)) { sh.complain(`disown: ${ids[0] || "current"}: no such job`, io); return 1; }
+    for (const j of picked) { j.protected = true; j.reaped = true; }
+    return 0;
+  };
+  // kill %N and kill PID for the shell's jobs; other PIDs go to the kill program.
+  B.kill = (sh, args, io) => {
+    const sigArg = args.find((a) => /^-(\w+)$/.test(a) && a !== "-l");
+    const sig = sigArg ? sigArg.slice(1).replace(/^SIG/, "").toUpperCase() : "TERM";
+    const num = /^\d+$/.test(sig) ? Number(sig) : SIGNUM[sig] || 15;
+    let st = 0;
+    const rest = [];
+    for (const a of args.filter((x) => x !== sigArg)) {
+      if (a === String(sh.sys.rootPid(sh))) { if (num) st = sh.receive(Object.keys(SIGNUM).find((k) => SIGNUM[k] === num) || "TERM", io); continue; }
+      const j = a.startsWith("%") ? sh.jobs.find((x) => String(x.n) === a.slice(1)) : sh.sys.bg.find((x) => String(x.pid) === a);
+      if (!j) { if (a.startsWith("%")) { sh.complain(`kill: ${a}: no such job`, io); st = 1; } else rest.push(a); continue; }
+      if (num === 0) continue;
+      if (j.end > sh.sys.fs.now && !j.killed) { j.killed = true; j.status = 128 + num; j.end = sh.sys.fs.now; }
+    }
+    if (rest.length) st = sh.sys.spawn(["kill", ...(sigArg ? [sigArg] : []), ...rest], sh.exportedEnv(), sh.cwd, io, sh) || st;
+    return st;
+  };
   B.let = (sh, args, io) => {
     if (!args.length) { sh.complain("let: expression expected", io); return 1; }
     let v = 0;
