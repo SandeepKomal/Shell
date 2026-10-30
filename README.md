@@ -42,6 +42,44 @@ chmod +x scripts/check_disk_usage.sh
 ./scripts/check_disk_usage.sh 80
 ```
 
+## Real-world automation (new)
+
+Scripts for the jobs that come up every week in operations, each with `-h`, safe defaults (dry runs before deletes), clear exit codes for cron and CI, and tests in `tests/`.
+
+### Shell (`scripts/`)
+
+| Script | What it is for |
+| --- | --- |
+| `retry.sh` | Retry a flaky command with exponential backoff and jitter: registry pushes, package mirrors, rate-limited APIs |
+| `wait_for.sh` | Wait until a `host:port` or URL answers, with a timeout: start an app only when its database is up |
+| `ssl_cert_expiry.sh` | Fail when any TLS certificate expires within N days; hosts from arguments or a file |
+| `backup_rotate.sh` | Dated `.tar.gz` backup with a SHA-256 checksum, verified after writing, keeping the newest N |
+| `release_deploy.sh` | Deploy into `releases/<timestamp>`, switch the `current` symlink atomically, roll back in one command |
+| `incident_snapshot.sh` | Read-only snapshot of a host during an incident (load, memory, disks, sockets, kernel and systemd logs) in one archive |
+| `deleted_open_files.sh` | "Disk full but du finds nothing": files deleted while a process still holds them open |
+| `user_access_audit.sh` | Access review: login shells, extra UID 0 accounts, sudo members, NOPASSWD rules, empty passwords, last logins |
+| `git_prune_branches.sh` | Delete branches already merged, locally and optionally on origin; dry run by default, main and release branches protected |
+| `preflight_check.sh` | Before a deploy: required commands, environment variables (never printed), free disk, free ports |
+
+```bash
+./scripts/retry.sh -n 5 -- docker push registry.example.com/app:1.4.2
+./scripts/wait_for.sh -t 60 db:5432 && ./start-app
+./scripts/ssl_cert_expiry.sh -w 21 -f hosts.txt
+./scripts/backup_rotate.sh -k 14 /srv/app/data /backups
+./scripts/release_deploy.sh deploy /srv/app ./build 5
+./scripts/release_deploy.sh rollback /srv/app
+sudo ./scripts/incident_snapshot.sh /root
+sudo ./scripts/deleted_open_files.sh 100
+./scripts/git_prune_branches.sh -r          # look first, then add -y
+./scripts/preflight_check.sh -c "docker kubectl" -e "IMAGE_TAG" -d /var:5 -p 8080
+```
+
+### Tests
+
+```bash
+tests/test_scripts.sh      # runs the scripts in throwaway directories
+```
+
 ## Day-to-day DevOps utilities
 
 ### Linux
@@ -160,7 +198,10 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md).
 ```bash
 shellcheck scripts/*.sh
 bash -n scripts/check_disk_usage.sh
+tests/test_scripts.sh
 ```
+
+CI runs ShellCheck and the test suite on every pull request.
 
 ## Roadmap
 
@@ -172,9 +213,6 @@ bash -n scripts/check_disk_usage.sh
 - Jenkins/GitHub Actions helpers
 - Trivy integration
 - Gitleaks integration
-- Linux security auditing
-- SSL certificate expiry checks
-- Backup verification
 - Log anomaly detection
 
 ## Support the project
