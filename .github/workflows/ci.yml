@@ -13,7 +13,7 @@ jobs:
     name: Shell scripts
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
       - name: ShellCheck (the new scripts and their tests)
         run: shellcheck scripts/retry.sh scripts/wait_for.sh scripts/ssl_cert_expiry.sh scripts/backup_rotate.sh scripts/release_deploy.sh scripts/incident_snapshot.sh scripts/deleted_open_files.sh scripts/user_access_audit.sh scripts/git_prune_branches.sh scripts/preflight_check.sh tests/test_scripts.sh
       - name: Run the scripts against throwaway directories
