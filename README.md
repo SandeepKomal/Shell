@@ -44,7 +44,7 @@ chmod +x scripts/check_disk_usage.sh
 
 ## Real-world automation (new)
 
-Scripts for the jobs that come up every week in operations, each with `-h` / `--help`, safe defaults (dry runs before deletes), clear exit codes for cron and CI, and tests in `tests/` and `python/tests/`.
+Scripts for the jobs that come up every week in operations, each with `-h`, safe defaults (dry runs before deletes), clear exit codes for cron and CI, and tests in `tests/`.
 
 ### Shell (`scripts/`)
 
@@ -74,39 +74,10 @@ sudo ./scripts/deleted_open_files.sh 100
 ./scripts/preflight_check.sh -c "docker kubectl" -e "IMAGE_TAG" -d /var:5 -p 8080
 ```
 
-### Python (`python/`)
-
-Standard library only: nothing to install beyond Python 3.9+.
-
-| Script | What it is for |
-| --- | --- |
-| `log_analyzer.py` | nginx/Apache logs: requests, status mix, 5xx rate, p50/p95/p99 latency, top clients, failing and slowest paths; fails above a 5xx threshold |
-| `http_monitor.py` | Check many URLs concurrently for status, body text and latency, with retries: post-deploy smoke tests and cron checks |
-| `cert_checker.py` | TLS expiry and validity for many hosts at once, JSON output for dashboards |
-| `port_check.py` | Is `host:port` reachable from here? Or, with `--expect closed`, is it properly firewalled? |
-| `backup_retention.py` | Grandfather-father-son retention (daily, weekly, monthly) for dated backup files; reports before it deletes |
-| `env_validator.py` | Compare `.env` with `.env.example`: missing, empty, placeholder and extra variables, without printing any value |
-| `secret_scanner.py` | Committed secrets: cloud keys, tokens, private keys, passwords in URLs; masked output, allowlist, pre-commit friendly |
-| `disk_report.py` | Biggest directories and files in one pass on one file system, with an alert threshold |
-| `webhook_notify.py` | Send an alert to Slack, Teams, Discord or any JSON webhook; the URL comes from an environment variable |
-
-```bash
-zcat /var/log/nginx/access.log.*.gz | python3 python/log_analyzer.py - --top 20
-python3 python/http_monitor.py --file endpoints.txt --slow 0.8
-python3 python/cert_checker.py example.com api.example.com:8443 --json
-python3 python/port_check.py db.internal:5432 cache.internal:6379
-python3 python/backup_retention.py /backups --pattern '*.tar.gz'      # then --delete
-python3 python/env_validator.py .env
-git diff --cached --name-only | python3 python/secret_scanner.py --stdin-files
-python3 python/disk_report.py /var --alert-percent 85
-./scripts/backup_rotate.sh /srv/data /backups || WEBHOOK_URL=... python3 python/webhook_notify.py "backup failed on $(hostname)" --level error
-```
-
 ### Tests
 
 ```bash
-tests/test_scripts.sh                                  # runs the shell scripts in throwaway directories
-python3 -m unittest discover -s python/tests -v       # the Python scripts
+tests/test_scripts.sh      # runs the scripts in throwaway directories
 ```
 
 ## Day-to-day DevOps utilities
@@ -228,10 +199,9 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md).
 shellcheck scripts/*.sh
 bash -n scripts/check_disk_usage.sh
 tests/test_scripts.sh
-python3 -m unittest discover -s python/tests
 ```
 
-CI runs ShellCheck, both test suites and the secret scanner on every pull request.
+CI runs ShellCheck and the test suite on every pull request.
 
 ## Roadmap
 

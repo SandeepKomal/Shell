@@ -19,14 +19,3 @@ jobs:
       - name: Run the scripts against throwaway directories
         run: tests/test_scripts.sh
 
-  python:
-    name: Python scripts
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Compile
-        run: python3 -m py_compile python/*.py
-      - name: Unit tests
-        run: python3 -m unittest discover -s python/tests -v
-      - name: No secrets committed
-        run: python3 python/secret_scanner.py .
