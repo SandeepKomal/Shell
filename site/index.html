@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="description" content="Fix real bash script failures in your browser: 62 incidents in a bash playground, a Script X-ray that flags risky lines, every common bash error explained, a quiz and a cheat sheet. Free, no sign-up.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Shell Quest: scripts that do not surprise you at 3 a.m.">
+  <meta property="og:description" content="Quoting, exit codes, pipes, traps and cron, learned by fixing broken bash scripts in a browser playground. Every common bash error explained.">
+  <meta property="og:url" content="https://sandeepkomal.github.io/Shell/">
+  <link rel="canonical" href="https://sandeepkomal.github.io/Shell/">
+  <title>Shell Quest</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="top">
+    <div class="wrap top-inner">
+      <a class="brand" href="#path" aria-label="Shell Quest home">
+        <img src="logo.svg" alt="" width="22" height="22">
+        Shell Quest
+      </a>
+      <nav aria-label="Sections">
+        <a href="#path" data-tab="path">Path</a>
+        <a href="#quiz" data-tab="quiz">Quiz</a>
+        <a href="#xray" data-tab="xray">Script X-ray</a>
+        <a href="#doctor" data-tab="doctor">Troubleshoot</a>
+        <a href="#cheats" data-tab="cheats">Cheat sheet</a>
+        <a href="#arch" data-tab="arch">Shell arch</a>
+      </nav>
+      <button type="button" class="kbd-btn" id="palette-open" aria-label="Search the site (Ctrl+K)"><span>Search</span><kbd id="palette-key">Ctrl K</kbd></button>
+      <a class="gh" id="gh-link" href="#">GitHub</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <section id="tab-path" class="tab">
+      <div class="hero">
+        <div class="wrap hero-grid">
+          <div class="hero-text">
+            <p class="eyebrow">Shell Quest</p>
+            <h1>Scripts that do not surprise you at 3 a.m.</h1>
+            <p class="sub">Quoting, exit codes, pipes and traps, with an X-ray that finds what will break before it runs, and a bash playground full of real incidents.</p>
+            <div class="ctas">
+              <a class="pill primary" href="#path-title" id="cta-path">Start the path</a>
+              <a class="text-link" href="#pg-title" id="cta-play">Try a scenario</a>
+            </div>
+          </div>
+          <figure class="stage" aria-labelledby="stage-title">
+            <div class="stage-bar">
+              <div><strong id="stage-title">deploy.sh</strong><div>Script X-ray: every risky line, explained.</div></div>
+              <button type="button" class="toggle" id="stage-toggle" aria-pressed="false">Apply the fixes</button>
+            </div>
+            <div class="stage-code mono" id="stage-code"></div>
+          </figure>
+        </div>
+      </div>
+
+      <div class="wrap">
+        <div class="stats" id="stats"></div>
+
+        <section class="bento-block" aria-labelledby="bento-title">
+          <h2 id="bento-title" class="big-title">Everything you need, from the first script to the 3 a.m. incident.</h2>
+          <div class="bento" id="bento"></div>
+        </section>
+
+        <section class="playground" aria-labelledby="pg-title">
+          <div class="pg-head">
+            <div>
+              <h2 id="pg-title" class="section-title">Fix a broken script. Right here.</h2>
+              <p class="section-sub">A bash shell over a small server, with real error messages. Run the script, edit it, run it again.</p>
+            </div>
+            <p id="pg-goal" class="pg-goal" aria-live="polite"></p>
+          </div>
+          <div class="guide-slot" data-guide="playground"></div>
+          <div class="pg-scenarios" id="pg-scenarios" role="group" aria-label="Scenario"></div>
+          <div class="pg-story" id="pg-story"></div>
+          <div class="pg-body">
+            <div class="pg-main">
+              <div class="pg-term" id="pg-term">
+                <div class="pg-bar" aria-hidden="true"><span></span><span></span><span></span><em id="pg-prompt-label">dev@web-01 · bash</em></div>
+                <div class="pg-out" id="pg-out" role="log" aria-live="polite" aria-label="Terminal output"></div>
+                <form class="pg-form" id="pg-form" autocomplete="off">
+                  <span aria-hidden="true">$</span>
+                  <input id="pg-input" type="text" spellcheck="false" autocapitalize="off" aria-label="Type a command" placeholder="./report.sh">
+                </form>
+              </div>
+              <div class="pg-editor card" id="pg-editor" hidden>
+                <div class="pg-editor-bar">
+                  <strong id="pg-editor-name"></strong>
+                  <span class="note">Ctrl+S saves · Esc closes</span>
+                </div>
+                <textarea id="pg-editor-text" spellcheck="false" autocapitalize="off" aria-label="Edit the file"></textarea>
+                <div class="pg-editor-actions">
+                  <button type="button" class="pill primary small-pill" id="pg-editor-save">Save</button>
+                  <button type="button" class="pill small-pill" id="pg-editor-cancel">Close</button>
+                </div>
+              </div>
+            </div>
+            <div class="pg-side">
+              <div class="pg-check" id="pg-check" aria-live="polite"></div>
+              <div class="pg-files card" id="pg-files"></div>
+              <div class="pg-try" id="pg-try"></div>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="start-title">
+          <h2 id="start-title" class="section-title">Practise on your own machine</h2>
+          <div class="start-grid">
+            <div class="card">
+              <h3>Get the scripts</h3>
+              <p class="muted">Bash 4 or later, on Linux, macOS (brew install bash) or WSL.</p>
+              <pre class="start"><code><span class="cm"># 1. Get the course</span>
+git clone https://github.com/SandeepKomal/Shell.git
+cd Shell
+
+<span class="cm"># 2. Run the tests: the scripts in throwaway folders</span>
+tests/test_scripts.sh
+
+<span class="cm"># 3. Try one</span>
+./scripts/check_disk_usage.sh 80</code></pre>
+            </div>
+            <div class="card">
+              <h3>Check your own scripts</h3>
+              <p class="muted">The habits this course builds, in four commands.</p>
+              <pre class="start"><code>bash -n script.sh        <span class="cm"># syntax</span>
+shellcheck script.sh     <span class="cm"># lint</span>
+bash -x script.sh        <span class="cm"># trace</span>
+env -i HOME="$HOME" PATH=/usr/bin:/bin ./script.sh   <span class="cm"># as cron</span></code></pre>
+              <p class="start-note">Or paste it into the <a href="#xray">Script X-ray</a>. Look up any error in <a href="#doctor">Troubleshoot</a>.</p>
+            </div>
+          </div>
+        </section>
+
+        <h2 class="section-title" id="path-title">Your path</h2>
+        <div class="guide-slot" data-guide="path"></div>
+        <div class="stages" id="stages" role="list"></div>
+        <div class="progress-row">
+          <div class="bar" role="progressbar" aria-label="Levels complete" aria-valuemin="0" aria-valuemax="18" id="bar"><span id="bar-fill"></span></div>
+          <span id="bar-text"></span>
+        </div>
+        <div id="levels"></div>
+        <p class="note">Progress is saved in this browser only. Tick a level when you have done its lab.</p>
+      </div>
+    </section>
+
+    <section id="tab-quiz" class="tab wrap" hidden>
+      <h2>Quiz</h2>
+      <p class="lede">Scenario questions for every level: predict what bash does. You see right or wrong as soon as you answer, with the reasoning.</p>
+      <div class="guide-slot" data-guide="quiz"></div>
+      <label class="field">Practise
+        <select id="quiz-level"></select>
+      </label>
+      <button type="button" class="pill small-pill quiz-again" id="quiz-again">Start again with new order</button>
+      <div id="quiz-list"></div>
+    </section>
+
+    <section id="tab-xray" class="tab wrap" hidden>
+      <h2>Script X-ray</h2>
+      <p class="lede">Paste a shell script to see what every line does, which lines are risky and why, and what is missing.</p>
+      <div class="guide-slot" data-guide="xray"></div>
+      <div class="xray-paste card" id="xray-edit">
+        <label for="xray-input" class="xray-paste-label">Paste a script</label>
+        <textarea id="xray-input" rows="12" spellcheck="false" autocapitalize="off" placeholder="#!/usr/bin/env bash&#10;set -euo pipefail&#10;..."></textarea>
+        <p id="xray-error" class="xray-warn" hidden></p>
+        <div class="xray-paste-actions">
+          <button type="button" class="pill primary small-pill" id="xray-go">Explain</button>
+          <button type="button" class="pill small-pill" id="xray-example">Load an example</button>
+          <span class="note">Ctrl+Enter explains. Everything stays in your browser; do not paste real secrets.</span>
+        </div>
+      </div>
+      <div class="xray-paste card" id="xray-result" hidden>
+        <div class="xray-result-bar">
+          <div>
+            <p class="xray-result-title" id="xray-summary"></p>
+            <p class="note">Select any line to see what it does. Red lines are dangerous, amber ones worth a second look.</p>
+          </div>
+          <div class="xray-result-actions">
+            <button type="button" class="pill small-pill" id="xray-edit-btn">Edit</button>
+            <button type="button" class="pill small-pill" id="xray-clear">Clear</button>
+          </div>
+        </div>
+        <div id="xray-review" aria-live="polite"></div>
+      </div>
+      <div class="xray" id="xray-view" hidden>
+        <ol id="xray-lines" class="code" aria-label="Script lines"></ol>
+        <aside id="xray-note" class="card" aria-live="polite"><p class="muted">Pick a line on the left.</p></aside>
+      </div>
+    </section>
+
+    <section id="tab-doctor" class="tab wrap" hidden>
+      <h2>Troubleshooting reference</h2>
+      <p class="lede">Paste the error bash printed, or describe the symptom. Each answer has the cause, how to confirm it, the fix, how to prevent it, and a scenario to practise on.</p>
+      <div class="guide-slot" data-guide="doctor"></div>
+      <label class="field">Search errors and symptoms
+        <input id="doctor-q" type="search" placeholder="Paste an error: unbound variable, command not found, ^M ..." autocomplete="off">
+      </label>
+      <div id="doctor-list" class="doctor-groups"></div>
+      <div id="doctor-out"></div>
+      <p class="note">Also as one plain page: <a href="problems.html">every bash error, explained</a>.</p>
+    </section>
+
+    <section id="tab-cheats" class="tab wrap" hidden>
+      <h2>Cheat sheet</h2>
+      <p class="lede">The commands and idioms scripts use most. Try runs one in the playground, in the scenario where it makes sense. Lab marks the few that need a real system.</p>
+      <div class="guide-slot" data-guide="cheats"></div>
+      <label class="field">Search
+        <input id="cheat-q" type="search" placeholder="trap, quote, awk, cron..." autocomplete="off">
+      </label>
+      <div id="cheat-out"></div>
+    </section>
+
+    <section id="tab-arch" class="tab wrap" hidden>
+      <h2>How bash runs a command</h2>
+      <p class="lede">From a line of text to running programs: what bash does, in order, and what goes wrong at each step. Type a command line to watch it go through.</p>
+      <div class="arch" id="arch"></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap foot-grid">
+      <div class="foot-brand">
+        <a class="brand" href="#path">
+          <img src="logo.svg" alt="" width="28" height="28">
+          Shell Quest
+        </a>
+        <p>Learn to write bash scripts that work in production: a playground of real incidents, a Script X-ray, quizzes and references, free for everyone.</p>
+        <a class="pill small-pill foot-gh" data-repo="" href="#">GitHub source code</a>
+      </div>
+      <nav class="foot-col" aria-label="Learn">
+        <h2>Learn</h2>
+        <a href="#path">Path and playground</a>
+        <a href="#quiz">Quiz</a>
+        <a href="#xray">Script X-ray</a>
+        <a href="#doctor">Troubleshoot</a>
+        <a href="#cheats">Cheat sheet</a>
+        <a href="#arch">Shell arch</a>
+        <a href="problems.html">Every bash error</a>
+      </nav>
+      <nav class="foot-col" aria-label="Project">
+        <h2>Project</h2>
+        <a data-repo="/tree/main/scripts" href="#">The scripts</a>
+        <a data-repo="/blob/main/CONTRIBUTING.md" href="#">Contributing</a>
+        <a data-repo="/issues" href="#">Report an issue</a>
+        <a data-repo="/blob/main/SECURITY.md" href="#">Security and privacy</a>
+        <a data-repo="/blob/main/README.md" href="#">README</a>
+      </nav>
+    </div>
+    <div class="wrap foot-base">
+      <p>© 2024–2026 Sandeep Komal Pothu and contributors.</p>
+      <p>Open source under the MIT License. Built with no trackers, no cookies and nothing loaded from other sites.</p>
+      <p>Your progress (levels, quiz scores, solved scenarios) stays in this browser and is never sent anywhere. <button type="button" class="link-btn" id="forget">Clear it</button></p>
+      <p class="foot-tm">Bash is a GNU project of the Free Software Foundation. This project is independent and not affiliated with the FSF or the GNU project.</p>
+    </div>
+  </footer>
+
+  <dialog id="palette" class="palette" aria-label="Search">
+    <input id="palette-input" type="text" placeholder="Jump to a level, scenario, error or section" autocomplete="off" aria-controls="palette-list">
+    <ul id="palette-list" role="listbox"></ul>
+    <p class="palette-foot muted"><kbd>↑</kbd> <kbd>↓</kbd> to move · <kbd>Enter</kbd> to open · <kbd>Esc</kbd> to close</p>
+  </dialog>
+
+  <script src="data.js"></script>
+  <script src="quiz-bank.js"></script>
+  <script src="bash.js"></script>
+  <script src="builtins.js"></script>
+  <script src="coreutils.js"></script>
+  <script src="scenarios.js"></script>
+  <script src="xray.js"></script>
+  <script src="search.js"></script>
+  <script src="app.js"></script>
+  <script src="playground.js"></script>
+  <script src="architecture.js"></script>
+</body>
+</html>

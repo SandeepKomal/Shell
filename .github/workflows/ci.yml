@@ -19,3 +19,20 @@ jobs:
       - name: Run the scripts against throwaway directories
         run: tests/test_scripts.sh
 
+  site:
+    name: Shell Quest site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Site scripts parse
+        run: for f in site/*.js tools/*.js tests/*.js; do node --check "$f"; done
+      - name: Content, links, cheat sheet Try rows and problems.html
+        run: node tests/check_site_data.js
+      - name: Playground scenarios start broken, wrong moves fail, fixes work
+        run: node tests/check_playground.js
+      - name: The playground's bash matches real bash
+        run: bash --version | head -1 && node tests/check_bash_parity.js
+      - name: Script X-ray rules
+        run: node tests/check_xray.js
+      - name: Fuzz the playground
+        run: node tests/fuzz_playground.js 3000

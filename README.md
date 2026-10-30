@@ -4,6 +4,27 @@ A collection of reusable **Bash scripts for Linux administration, DevOps, cloud,
 
 The goal is simple: provide small scripts that solve common day-to-day operational problems and are easy to understand, modify, and automate with cron or CI/CD.
 
+## Shell Quest: the learning site
+
+[Shell Quest](https://sandeepkomal.github.io/Shell/) teaches bash scripting by fixing scripts that break the way real ones do. It is free, needs no account and sends nothing anywhere.
+
+- **Playground**: a bash shell over a small simulated server, with incidents from quoting and exit codes to cron, background jobs, locks, retries and secrets. Run the script, read the real error, edit it, run it again.
+- **Path**: levels from a first script to production incidents, each with a lab that uses the scripts in this repository.
+- **Script X-ray**: paste a script to see every line explained and risky lines flagged.
+- **Troubleshoot**: every common bash error with its cause, how to confirm it, the fix and how to prevent it; also as one plain page, [problems.html](https://sandeepkomal.github.io/Shell/problems.html).
+- **Quiz**, **Cheat sheet** and **Shell arch** (how bash runs a command line).
+
+The site is static HTML, CSS and JavaScript in `site/`, published with GitHub Pages. To work on it, open `site/index.html` in a browser or serve the folder (`python3 -m http.server -d site`), and run the tests:
+
+```bash
+node tests/check_site_data.js     # content, links, cheat sheet rows, problems.html
+node tests/check_playground.js    # every scenario starts broken; wrong moves fail; fixes work
+node tests/check_bash_parity.js   # the playground's bash prints what bash 5.2 prints
+node tests/check_xray.js          # X-ray rules
+node tests/fuzz_playground.js     # thousands of random commands, no exceptions
+node tools/build_problems.js      # regenerate site/problems.html after editing Troubleshoot entries
+```
+
 ## Repository structure
 
 ```text
@@ -17,6 +38,9 @@ Shell/
 ├── Service Health Check/
 ├── System Uptime Check/
 ├── Automatic Package Updates/
+├── site/                 # Shell Quest, the learning site (GitHub Pages)
+├── tools/                # build_problems.js for site/problems.html
+├── tests/                # test_scripts.sh and the site's node tests
 ├── scripts/
 │   ├── check_disk_usage.sh
 │   ├── check_http_endpoint.sh

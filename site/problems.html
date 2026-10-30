@@ -1,0 +1,972 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="description" content="Every common bash error explained: what it means, why it happens, how to confirm it, how to fix it and how to prevent it. 45 entries, from command not found to unbound variable.">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Bash errors, explained">
+  <meta property="og:description" content="Symptom, cause, confirm, fix and prevent for 45 common bash errors.">
+  <meta property="og:url" content="https://sandeepkomal.github.io/Shell/problems.html">
+  <link rel="canonical" href="https://sandeepkomal.github.io/Shell/problems.html">
+  <title>Bash errors explained</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-inner">
+      <a class="brand" href="index.html"><img src="logo.svg" alt="" width="22" height="22"> Shell Quest</a>
+    </div>
+  </header>
+  <main class="wrap">
+    <h1 class="big-title">Bash errors, explained</h1>
+    <p class="lede">What each error means, why it happens, the commands that confirm the cause, the fix and how to prevent it. Search them, and practise the fixes, in <a href="index.html#doctor">Troubleshoot</a>.</p>
+    <ul class="note">
+      <li>Running scripts: <a href="#command-not-found">command not found</a>, <a href="#permission-denied">Permission denied</a>, <a href="#no-such-file">No such file or directory</a>, <a href="#required-file-not-found">cannot execute: required file not found</a>, <a href="#carriage-return">$'\r': command not found</a>, <a href="#dash-not-found">[[: not found</a>, <a href="#argument-list-too-long">Argument list too long</a></li>
+      <li>Syntax: <a href="#syntax-error-token">syntax error near unexpected token</a>, <a href="#unexpected-end-of-file">syntax error: unexpected end of file</a>, <a href="#unexpected-eof-matching">unexpected EOF while looking for matching</a></li>
+      <li>Variables: <a href="#unbound-variable">unbound variable</a>, <a href="#parameter-null">parameter null or not set</a>, <a href="#bad-substitution">bad substitution</a>, <a href="#readonly-variable">readonly variable</a>, <a href="#not-valid-identifier">not a valid identifier</a>, <a href="#ifs-changed">Words no longer split after changing IFS</a></li>
+      <li>Tests: <a href="#unary-operator-expected">unary operator expected</a>, <a href="#binary-operator-expected">binary operator expected</a>, <a href="#too-many-arguments">too many arguments</a>, <a href="#integer-expression-expected">integer expression expected</a></li>
+      <li>Arithmetic: <a href="#operand-expected">syntax error: operand expected</a>, <a href="#value-too-great-for-base">value too great for base</a>, <a href="#division-by-zero">division by 0</a></li>
+      <li>Redirection: <a href="#ambiguous-redirect">ambiguous redirect</a>, <a href="#here-document-eof">here-document delimited by end-of-file</a></li>
+      <li>Functions: <a href="#return-numeric">return: numeric argument required</a>, <a href="#local-outside-function">local: can only be used in a function</a>, <a href="#illegal-option">illegal option</a>, <a href="#maximum-nesting">maximum function nesting level exceeded</a></li>
+      <li>Text tools: <a href="#unknown-option-to-s">sed: unknown option to `s'</a>, <a href="#find-paths-must-precede">find: paths must precede expression</a>, <a href="#cannot-stat">cp: cannot stat</a>, <a href="#date-invalid">date: invalid date</a></li>
+      <li>Jobs and signals: <a href="#background-status-lost">A failed background job did not fail the script</a>, <a href="#wait-not-child">wait: pid is not a child of this shell</a>, <a href="#terminated">Terminated</a>, <a href="#nohup-ignoring-input">nohup: ignoring input and appending output to 'nohup.out'</a>, <a href="#timeout-124">Exit status 124 from timeout</a></li>
+      <li>Exit status: <a href="#exit-status-codes">What does exit status 126, 127, 130 or 137 mean?</a>, <a href="#exits-silently">Script exits silently with set -e</a>, <a href="#set-e-did-not-stop">set -e did not stop the script</a>, <a href="#variable-empty-after-loop">A variable is empty after a loop</a>, <a href="#last-line-missing">The last line of a file is skipped</a></li>
+      <li>Cron and environment: <a href="#works-in-terminal-not-cron">Works in the terminal, fails from cron</a>, <a href="#curl-errors">curl: (22) The requested URL returned error</a></li>
+    </ul>
+    <h2 class="stage-h">Running scripts</h2>
+    <section class="card problem" id="command-not-found">
+      <h3>command not found</h3>
+      <pre class="err-line"><code>./deploy.sh: line 5: ehco: command not found</code></pre>
+      <h4>Symptom</h4>
+      <p>A script or the terminal stops on a word it cannot run. The exit status is 127.</p>
+      <h4>Cause</h4>
+      <p>Bash looked for a function, a builtin and then a program with that name in every directory of <code>$PATH</code>, and found none.</p>
+      <ul>
+        <li>A typo in the command name</li>
+        <li>The program is installed outside <code>$PATH</code> (for example /usr/local/bin under cron)</li>
+        <li>Spaces around <code>=</code> in an assignment: <code>NAME = value</code> runs a command called NAME</li>
+        <li>A script in the current directory run without <code>./</code></li>
+        <li>A function defined in your terminal, which child scripts never see</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>type -a &lt;name&gt;
+echo &quot;$PATH&quot;
+command -v &lt;name&gt; || echo missing</code></pre>
+      <h4>Fix</h4>
+      <p>Correct the name, install the program, call it by its full path, or set PATH at the top of the script. For assignments, remove the spaces: <code>NAME=value</code>.</p>
+      <h4>Prevent</h4>
+      <p>Set PATH explicitly in scripts that run from cron or CI, and check required tools up front with <code>command -v</code>.</p>
+      <p class="note">Practise it: <a href="index.html#play/typo">command not found</a> · <a href="index.html#play/assign">Spaces around =</a> · <a href="index.html#play/cronpath">Works in the terminal, not in cron</a> · <a href="index.html#fix/command-not-found">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="permission-denied">
+      <h3>Permission denied</h3>
+      <pre class="err-line"><code>bash: ./report.sh: Permission denied</code></pre>
+      <h4>Symptom</h4>
+      <p>Running a script by its path fails at once with exit status 126.</p>
+      <h4>Cause</h4>
+      <p>The file exists but is not executable for you, or a directory on its path cannot be entered.</p>
+      <ul>
+        <li>The script has no execute bit (<code>-rw-r--r--</code>)</li>
+        <li>The file system is mounted <code>noexec</code>, as /tmp often is</li>
+        <li>A fixed file name in the shared /tmp that another user's job created first</li>
+        <li>Writing to a file the shell cannot open, such as <code>sudo echo x &gt; /etc/file</code> (the redirection runs as you)</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>ls -l &lt;script&gt;
+findmnt -no OPTIONS --target &lt;script&gt;
+id</code></pre>
+      <h4>Fix</h4>
+      <p><code>chmod +x script.sh</code>. For <code>noexec</code> mounts run <code>bash script.sh</code> or move the script. For root-owned files use <code>echo x | sudo tee /etc/file</code>.</p>
+      <h4>Prevent</h4>
+      <p>Commit scripts with the execute bit (<code>git update-index --chmod=+x</code>) and keep them out of /tmp.</p>
+      <p class="note">Practise it: <a href="index.html#play/noexec">Permission denied</a> · <a href="index.html#play/sudoredirect">sudo and a redirect</a> · <a href="index.html#play/tmpname">A fixed name in /tmp</a> · <a href="index.html#fix/permission-denied">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="no-such-file">
+      <h3>No such file or directory</h3>
+      <pre class="err-line"><code>/opt/tools/report.sh: line 2: ./lib/common.sh: No such file or directory</code></pre>
+      <h4>Symptom</h4>
+      <p>A script, <code>source</code>, <code>cd</code> or a redirection fails on a path that you can see exists.</p>
+      <h4>Cause</h4>
+      <p>The path is resolved from the current directory, which is not the one you expect, or the name has invisible characters or spaces.</p>
+      <ul>
+        <li>A relative path, run from cron or another directory</li>
+        <li>An unquoted path with spaces split into several arguments</li>
+        <li>A carriage return at the end of the name from a Windows file</li>
+        <li>The parent directory of a redirection does not exist</li>
+        <li>A glob that matched nothing, passed on literally (<code>*.log</code>)</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>pwd
+ls -l -- &quot;&lt;path&gt;&quot;
+printf '%q\n' &quot;&lt;path&gt;&quot;</code></pre>
+      <h4>Fix</h4>
+      <p>Use absolute paths, or build them from the script's directory: <code>$(dirname &quot;${BASH_SOURCE[0]}&quot;)</code>. Quote paths. Strip <code>\r</code> from data files.</p>
+      <h4>Prevent</h4>
+      <p>Start scripts with <code>cd &quot;$(dirname &quot;${BASH_SOURCE[0]}&quot;)&quot; || exit 1</code> when they rely on neighbouring files, and use <code>shopt -s nullglob</code> before looping over globs.</p>
+      <p class="note">Practise it: <a href="index.html#play/sourcepath">source finds nothing from cron</a> · <a href="index.html#play/spaces">Spaces in a path</a> · <a href="index.html#play/nomatch">A glob that matches nothing</a> · <a href="index.html#fix/no-such-file">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="required-file-not-found">
+      <h3>cannot execute: required file not found</h3>
+      <pre class="err-line"><code>bash: ./deploy.sh: cannot execute: required file not found</code></pre>
+      <h4>Symptom</h4>
+      <p>A script that exists and is executable fails immediately with exit status 127. Older bash says <code>/bin/bash^M: bad interpreter: No such file or directory</code>; <code>env</code> says <code>/usr/bin/env: 'bash\r': No such file or directory</code>.</p>
+      <h4>Cause</h4>
+      <p>The interpreter named on the <code>#!</code> line does not exist. Almost always the line ends with a Windows carriage return, so the kernel looks for <code>/bin/bash\r</code>.</p>
+      <ul>
+        <li>The file was saved with CRLF line endings</li>
+        <li>The <code>#!</code> line names an interpreter that is not installed, such as /bin/zsh</li>
+        <li>A typo in the <code>#!</code> path</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>head -1 &lt;script&gt; | cat -A
+file &lt;script&gt;</code></pre>
+      <h4>Fix</h4>
+      <p>Convert the line endings: <code>sed -i 's/\r$//' script.sh</code> or <code>dos2unix script.sh</code>.</p>
+      <h4>Prevent</h4>
+      <p>Add <code>*.sh text eol=lf</code> to <code>.gitattributes</code> and set your editor to LF for scripts.</p>
+      <p class="note">Practise it: <a href="index.html#play/crlf">cannot execute: required file not found</a> · <a href="index.html#fix/required-file-not-found">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="carriage-return">
+      <h3>$'\r': command not found</h3>
+      <pre class="err-line"><code>deploy.sh: line 2: $'\r': command not found</code></pre>
+      <h4>Symptom</h4>
+      <p><code>bash script.sh</code> prints <code>$'\r': command not found</code> on blank lines, and <code>syntax error near unexpected token $'do\r''</code>.</p>
+      <h4>Cause</h4>
+      <p>Every line ends with a carriage return, which bash treats as part of the last word.</p>
+      <ul>
+        <li>The file was edited on Windows or copied from a web page</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>cat -A &lt;script&gt; | head
+file &lt;script&gt;</code></pre>
+      <h4>Fix</h4>
+      <p><code>sed -i 's/\r$//' script.sh</code>, then run it again.</p>
+      <h4>Prevent</h4>
+      <p><code>.gitattributes</code> with <code>*.sh text eol=lf</code>.</p>
+      <p class="note">Practise it: <a href="index.html#play/crlf">cannot execute: required file not found</a> · <a href="index.html#play/crlfdata">A Windows file breaks a comparison</a> · <a href="index.html#fix/carriage-return">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="dash-not-found">
+      <h3>[[: not found</h3>
+      <pre class="err-line"><code>/home/dev/report.sh: 3: [[: not found</code></pre>
+      <h4>Symptom</h4>
+      <p>A bash script fails under cron, <code>sh script.sh</code> or a Docker <code>CMD</code>, with errors such as <code>[[: not found</code>, <code>source: not found</code>, <code>[: x: unexpected operator</code> or <code>Bad substitution</code>.</p>
+      <h4>Cause</h4>
+      <p>The script is running in sh (dash on Debian and Ubuntu, busybox ash on Alpine), which lacks bash features.</p>
+      <ul>
+        <li>No <code>#!</code> line, so <code>/bin/sh</code> runs it</li>
+        <li>Running it as <code>sh script.sh</code>, which ignores the <code>#!</code> line</li>
+        <li><code>#!/bin/sh</code> on a script that uses bash features</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>head -1 &lt;script&gt;
+ls -l /bin/sh</code></pre>
+      <h4>Fix</h4>
+      <p>Start with <code>#!/usr/bin/env bash</code> and run the file directly (<code>./script.sh</code>), or write POSIX sh only.</p>
+      <h4>Prevent</h4>
+      <p>Always write a <code>#!</code> line; check sh scripts with <code>checkbashisms</code> or ShellCheck's <code>--shell=sh</code>.</p>
+      <p class="note">Practise it: <a href="index.html#play/noshebang">[[: not found</a> · <a href="index.html#fix/dash-not-found">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="argument-list-too-long">
+      <h3>Argument list too long</h3>
+      <pre class="err-line"><code>bash: /usr/bin/rm: Argument list too long</code></pre>
+      <h4>Symptom</h4>
+      <p><code>rm *.log</code>, <code>cp *</code> or <code>grep x *</code> fail in a directory with many files.</p>
+      <h4>Cause</h4>
+      <p>The glob expanded to more text than the kernel allows for one program's arguments.</p>
+      <ul>
+        <li>Tens of thousands of matching files</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>ls | wc -l
+getconf ARG_MAX</code></pre>
+      <h4>Fix</h4>
+      <p>Let find do it: <code>find . -name '*.log' -delete</code>, or <code>find . -name '*.log' -print0 | xargs -0 rm --</code>.</p>
+      <h4>Prevent</h4>
+      <p>Use find for bulk operations on directories that grow.</p>
+      <p class="note"><a href="index.html#fix/argument-list-too-long">Open in Troubleshoot</a></p>
+    </section>
+    <h2 class="stage-h">Syntax</h2>
+    <section class="card problem" id="syntax-error-token">
+      <h3>syntax error near unexpected token</h3>
+      <pre class="err-line"><code>deploy.sh: line 9: syntax error near unexpected token `fi'</code></pre>
+      <h4>Symptom</h4>
+      <p>The script stops before running the command at that line, with exit status 2.</p>
+      <h4>Cause</h4>
+      <p>Bash read a word or operator where its grammar does not allow one. The real mistake is often a line or two earlier.</p>
+      <ul>
+        <li>A missing <code>then</code>, <code>do</code>, <code>;</code> or <code>;;</code></li>
+        <li>A missing space: <code>if [$x = 1]</code> or <code>}</code> without a <code>;</code> before it</li>
+        <li>Windows line endings (<code>$'do\r'</code>)</li>
+        <li>A function written as <code>function name() {</code> in sh</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>bash -n &lt;script&gt;
+cat -A &lt;script&gt; | sed -n '1,12p'</code></pre>
+      <h4>Fix</h4>
+      <p>Look at the named line and the one before it; add the missing keyword, space or separator.</p>
+      <h4>Prevent</h4>
+      <p>Run <code>bash -n</code> and ShellCheck in CI on every script.</p>
+      <p class="note">Practise it: <a href="index.html#play/crlf">cannot execute: required file not found</a> · <a href="index.html#fix/syntax-error-token">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="unexpected-end-of-file">
+      <h3>syntax error: unexpected end of file</h3>
+      <pre class="err-line"><code>deploy.sh: line 14: syntax error: unexpected end of file</code></pre>
+      <h4>Symptom</h4>
+      <p>The error points at the last line of the script.</p>
+      <h4>Cause</h4>
+      <p>Something opened was never closed: <code>if</code> without <code>fi</code>, <code>do</code> without <code>done</code>, <code>{</code> without <code>}</code>, or a here-document without its end marker.</p>
+      <ul>
+        <li>A missing <code>fi</code>, <code>done</code>, <code>esac</code> or <code>}</code></li>
+        <li>A here-document whose end marker is indented or has trailing spaces</li>
+        <li><code>}</code> on the same line as a command without <code>;</code></li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>bash -n &lt;script&gt;
+grep -nE '^\s*(if|fi|for|while|do|done|case|esac)\b' &lt;script&gt;</code></pre>
+      <h4>Fix</h4>
+      <p>Find the block that is not closed and close it. Put here-document end markers at the start of the line (or use <code>&lt;&lt;-</code> with tabs).</p>
+      <h4>Prevent</h4>
+      <p>Indent consistently so open blocks are visible, and run <code>bash -n</code> in CI.</p>
+      <p class="note"><a href="index.html#fix/unexpected-end-of-file">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="unexpected-eof-matching">
+      <h3>unexpected EOF while looking for matching</h3>
+      <pre class="err-line"><code>deploy.sh: line 3: unexpected EOF while looking for matching `&quot;'</code></pre>
+      <h4>Symptom</h4>
+      <p>The script stops with exit status 2; lines after the quote never run.</p>
+      <h4>Cause</h4>
+      <p>A quote, <code>$(</code>, or backtick was opened and never closed before the end of the file.</p>
+      <ul>
+        <li>An unbalanced <code>&quot;</code> or <code>'</code></li>
+        <li>An apostrophe inside single quotes: <code>'it's'</code></li>
+        <li>A <code>$(</code> without its <code>)</code></li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>bash -n &lt;script&gt;
+grep -n &quot;'&quot; &lt;script&gt;</code></pre>
+      <h4>Fix</h4>
+      <p>Close the quote. For an apostrophe inside single quotes write <code>'it'\''s'</code>, or use double quotes.</p>
+      <h4>Prevent</h4>
+      <p>An editor with syntax highlighting shows the unclosed string at once.</p>
+      <p class="note"><a href="index.html#fix/unexpected-eof-matching">Open in Troubleshoot</a></p>
+    </section>
+    <h2 class="stage-h">Variables</h2>
+    <section class="card problem" id="unbound-variable">
+      <h3>unbound variable</h3>
+      <pre class="err-line"><code>./sync.sh: line 3: DEBUG: unbound variable</code></pre>
+      <h4>Symptom</h4>
+      <p>With <code>set -u</code> the script exits with status 1 as soon as it reads a variable that was never set.</p>
+      <h4>Cause</h4>
+      <p><code>set -u</code> (nounset) makes reading an unset variable an error, which ends a non-interactive shell.</p>
+      <ul>
+        <li>An optional variable with no default</li>
+        <li>A missing argument: <code>$1</code> when the script was run with none</li>
+        <li>A typo in a variable name</li>
+        <li>A variable set in your login shell but not under cron or CI</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>declare -p &lt;NAME&gt;
+env | grep &lt;NAME&gt;</code></pre>
+      <h4>Fix</h4>
+      <p>Give optional variables a default with <code>${NAME:-default}</code>, require others with <code>${NAME:?message}</code>, and fix typos.</p>
+      <h4>Prevent</h4>
+      <p>Keep <code>set -u</code>: it finds typos. Document required variables at the top of the script.</p>
+      <p class="note">Practise it: <a href="index.html#play/nounset">unbound variable</a> · <a href="index.html#play/rmempty">rm -rf with an empty variable</a> · <a href="index.html#play/logrotate">Log cleanup deletes the wrong files</a> · <a href="index.html#fix/unbound-variable">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="parameter-null">
+      <h3>parameter null or not set</h3>
+      <pre class="err-line"><code>./migrate.sh: line 2: DEPLOY_ENV: DEPLOY_ENV is not set</code></pre>
+      <h4>Symptom</h4>
+      <p>The script stops with status 1 and prints a variable name followed by a message.</p>
+      <h4>Cause</h4>
+      <p>A <code>${NAME:?message}</code> guard found the variable empty or unset. This is the guard working.</p>
+      <ul>
+        <li>The variable was not passed in, or not exported by the parent script</li>
+        <li>A missing command-line argument (<code>${1:?usage}</code>)</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>env | grep &lt;NAME&gt;
+declare -p &lt;NAME&gt;</code></pre>
+      <h4>Fix</h4>
+      <p>Pass the value: <code>export NAME=value</code> in the caller, or <code>NAME=value ./script.sh</code>.</p>
+      <h4>Prevent</h4>
+      <p>Keep the guard; add a usage message so the next person knows what to pass. If the message comes from a here-document, quote its delimiter (<code>&lt;&lt;'EOF'</code>).</p>
+      <p class="note">Practise it: <a href="index.html#play/export">A child script sees nothing</a> · <a href="index.html#play/rmempty">rm -rf with an empty variable</a> · <a href="index.html#play/heredoc">Here-document expands too early</a> · <a href="index.html#fix/parameter-null">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="bad-substitution">
+      <h3>bad substitution</h3>
+      <pre class="err-line"><code>./report.sh: 4: Bad substitution</code></pre>
+      <h4>Symptom</h4>
+      <p>A <code>${...}</code> expansion fails. In dash the message is <code>Bad substitution</code> with a capital B.</p>
+      <h4>Cause</h4>
+      <p>The shell does not understand that form of <code>${...}</code>: either it is a bash feature running in sh, or it is mistyped.</p>
+      <ul>
+        <li>Bash-only forms like <code>${var//a/b}</code> or <code>${var^^}</code> run by sh (no <code>#!</code> line, or <code>sh script.sh</code>)</li>
+        <li>A typo such as <code>${x!}</code> or a space inside the braces</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>head -1 &lt;script&gt;
+ls -l /bin/sh</code></pre>
+      <h4>Fix</h4>
+      <p>Run the script with bash: <code>#!/usr/bin/env bash</code> and <code>./script.sh</code>, not <code>sh script.sh</code>. Correct the expansion.</p>
+      <h4>Prevent</h4>
+      <p>Start every script with a <code>#!</code> line for the shell you write for.</p>
+      <p class="note">Practise it: <a href="index.html#play/noshebang">[[: not found</a> · <a href="index.html#fix/bad-substitution">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="readonly-variable">
+      <h3>readonly variable</h3>
+      <pre class="err-line"><code>./deploy.sh: line 8: ENV: readonly variable</code></pre>
+      <h4>Symptom</h4>
+      <p>An assignment fails with status 1 and the old value stays.</p>
+      <h4>Cause</h4>
+      <p>The variable was made read-only with <code>readonly</code> or <code>declare -r</code>, often in a sourced settings file.</p>
+      <ul>
+        <li>A library or env file marks settings readonly</li>
+        <li>Assigning to bash's own read-only variables such as <code>UID</code></li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>declare -p &lt;NAME&gt;</code></pre>
+      <h4>Fix</h4>
+      <p>Use another name, or set the value before it is made read-only.</p>
+      <h4>Prevent</h4>
+      <p>Do not reuse names like <code>UID</code>, <code>PWD</code> or <code>PATH</code> for your own data.</p>
+      <p class="note"><a href="index.html#fix/readonly-variable">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="not-valid-identifier">
+      <h3>not a valid identifier</h3>
+      <pre class="err-line"><code>./env.sh: line 2: export: `DB-HOST=db.internal': not a valid identifier</code></pre>
+      <h4>Symptom</h4>
+      <p><code>export</code>, <code>read</code>, <code>local</code> or <code>unset</code> rejects a name.</p>
+      <h4>Cause</h4>
+      <p>Variable names may contain only letters, digits and underscores, and cannot start with a digit.</p>
+      <ul>
+        <li>A dash in a name, as in <code>DB-HOST</code></li>
+        <li>A <code>$</code> before the name: <code>read $name</code></li>
+        <li>Spaces around <code>=</code> with export: <code>export A = 1</code></li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>grep -n 'export\|read' &lt;script&gt;</code></pre>
+      <h4>Fix</h4>
+      <p>Use a valid name (<code>DB_HOST</code>) and no <code>$</code> where you assign or read into a variable.</p>
+      <h4>Prevent</h4>
+      <p>Use UPPER_SNAKE_CASE for environment variables.</p>
+      <p class="note"><a href="index.html#fix/not-valid-identifier">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="ifs-changed">
+      <h3>Words no longer split after changing IFS</h3>
+      <pre class="err-line"><code>restart-svc: unknown service 'nginx redis worker'</code></pre>
+      <h4>Symptom</h4>
+      <p>After some CSV parsing, a list of names arrives as one word, or paths are split at commas.</p>
+      <h4>Cause</h4>
+      <p><code>IFS=,</code> on its own line changes word splitting for the rest of the script: spaces stop separating words.</p>
+      <ul>
+        <li><code>IFS=,</code> (or IFS=$'\n') set globally to parse one line</li>
+        <li>Forgetting to restore IFS</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>printf '%q\n' &quot;$IFS&quot;</code></pre>
+      <h4>Fix</h4>
+      <p>Set IFS only for the command that needs it: <code>IFS=, read -r a b &lt;&lt;&lt; &quot;$line&quot;</code>. Use arrays for lists.</p>
+      <h4>Prevent</h4>
+      <p>Never change IFS globally; if you must, do it in a function with <code>local IFS</code>.</p>
+      <p class="note">Practise it: <a href="index.html#play/ifsreset">IFS changed for the whole script</a> · <a href="index.html#fix/ifs-changed">Open in Troubleshoot</a></p>
+    </section>
+    <h2 class="stage-h">Tests</h2>
+    <section class="card problem" id="unary-operator-expected">
+      <h3>unary operator expected</h3>
+      <pre class="err-line"><code>./health.sh: line 3: [: !=: unary operator expected</code></pre>
+      <h4>Symptom</h4>
+      <p>An <code>if [ ... ]</code> prints this error and takes the else branch (status 2), so alerts and checks silently do nothing.</p>
+      <h4>Cause</h4>
+      <p>An unquoted variable was empty, so it vanished: <code>[ $x != ok ]</code> became <code>[ != ok ]</code>.</p>
+      <ul>
+        <li>An unquoted empty variable inside <code>[ ]</code></li>
+        <li>A command substitution that printed nothing</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>declare -p &lt;NAME&gt;
+bash -x &lt;script&gt;</code></pre>
+      <h4>Fix</h4>
+      <p>Quote the variable: <code>[ &quot;$x&quot; != ok ]</code>, or use <code>[[ $x != ok ]]</code>.</p>
+      <h4>Prevent</h4>
+      <p>Quote every expansion inside <code>[ ]</code>, or prefer <code>[[ ]]</code> in bash scripts. The same mistake makes <code>[ -n $var ]</code> true when var is empty.</p>
+      <p class="note">Practise it: <a href="index.html#play/emptytest">unary operator expected</a> · <a href="index.html#play/ntest">[ -n $var ] is always true</a> · <a href="index.html#fix/unary-operator-expected">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="binary-operator-expected">
+      <h3>binary operator expected</h3>
+      <pre class="err-line"><code>./watch.sh: line 2: [: -q: binary operator expected</code></pre>
+      <h4>Symptom</h4>
+      <p>An <code>if [ ... ]</code> prints an error and is treated as false. With four or more words the message is a syntax error naming the unexpected word instead.</p>
+      <h4>Cause</h4>
+      <p><code>[</code> received words it cannot read as a test: usually a command put inside the brackets, or a value with spaces.</p>
+      <ul>
+        <li><code>if [ grep -q x file ]</code>: a command inside <code>[ ]</code></li>
+        <li>An unquoted variable with spaces in it</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>bash -x &lt;script&gt;</code></pre>
+      <h4>Fix</h4>
+      <p>Run the command directly: <code>if grep -q x file; then</code>. Quote variables: <code>[ &quot;$a&quot; = &quot;$b&quot; ]</code>.</p>
+      <h4>Prevent</h4>
+      <p>Remember that <code>[</code> is the test command, not grouping.</p>
+      <p class="note">Practise it: <a href="index.html#play/testcmd">[ with a command inside</a> · <a href="index.html#fix/binary-operator-expected">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="too-many-arguments">
+      <h3>too many arguments</h3>
+      <pre class="err-line"><code>./check.sh: line 4: [: too many arguments</code></pre>
+      <h4>Symptom</h4>
+      <p>A test fails with status 2 when a value has spaces or matches several files.</p>
+      <h4>Cause</h4>
+      <p>An unquoted variable split into several words, or a glob expanded to several file names, inside <code>[ ]</code> or <code>cd</code>.</p>
+      <ul>
+        <li><code>[ $name = x ]</code> where name has spaces</li>
+        <li><code>[ -f *.log ]</code> with more than one log file</li>
+        <li><code>cd $dir</code> with spaces in the path</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>declare -p &lt;NAME&gt;
+bash -x &lt;script&gt;</code></pre>
+      <h4>Fix</h4>
+      <p>Quote: <code>[ &quot;$name&quot; = x ]</code>. To test for any matching file use <code>compgen -G '*.log'</code> or a loop.</p>
+      <h4>Prevent</h4>
+      <p>Quote every variable you did not intend to split.</p>
+      <p class="note">Practise it: <a href="index.html#play/spaces">Spaces in a path</a> · <a href="index.html#play/emptytest">unary operator expected</a> · <a href="index.html#fix/too-many-arguments">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="integer-expression-expected">
+      <h3>integer expression expected</h3>
+      <pre class="err-line"><code>./disk.sh: line 3: [: 100%: integer expression expected</code></pre>
+      <h4>Symptom</h4>
+      <p>A numeric test errors and is treated as false; thresholds never trigger.</p>
+      <h4>Cause</h4>
+      <p><code>-gt</code>, <code>-lt</code>, <code>-eq</code> and friends need plain integers. The value has a unit, a decimal point, spaces or a <code>\r</code>.</p>
+      <ul>
+        <li>A percentage or unit from <code>df</code>, <code>free -h</code> or <code>du -h</code></li>
+        <li>A decimal such as load average <code>1.52</code></li>
+        <li>An empty value</li>
+        <li>A carriage return from a Windows file</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>printf '%q\n' &quot;$value&quot;</code></pre>
+      <h4>Fix</h4>
+      <p>Strip units first: <code>v=${v%\%}</code>; use <code>awk</code> for decimals; give empty values a default. Do not switch to <code>&gt;</code>, which compares text (100 sorts before 90).</p>
+      <h4>Prevent</h4>
+      <p>Ask tools for raw numbers (<code>df -P</code>, <code>--output</code>, <code>-b</code>) rather than human-readable ones.</p>
+      <p class="note">Practise it: <a href="index.html#play/intcompare">integer expression expected</a> · <a href="index.html#fix/integer-expression-expected">Open in Troubleshoot</a></p>
+    </section>
+    <h2 class="stage-h">Arithmetic</h2>
+    <section class="card problem" id="operand-expected">
+      <h3>syntax error: operand expected</h3>
+      <pre class="err-line"><code>./report.sh: line 6: 91%: syntax error: operand expected (error token is &quot;%&quot;)</code></pre>
+      <h4>Symptom</h4>
+      <p>An arithmetic expansion fails and bash abandons the rest of that command line.</p>
+      <h4>Cause</h4>
+      <p>The text inside <code>$(( ))</code>, <code>(( ))</code> or a variable used there is not a valid number or expression.</p>
+      <ul>
+        <li>A value with a unit, such as <code>91%</code></li>
+        <li>An empty operand: <code>$(( 3 + ))</code></li>
+        <li>A variable holding text</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>printf '%q\n' &quot;$value&quot;</code></pre>
+      <h4>Fix</h4>
+      <p>Clean the value before using it in arithmetic, and give empty values a default: <code>$(( ${n:-0} + 1 ))</code>.</p>
+      <h4>Prevent</h4>
+      <p>Validate numbers: <code>[[ $n =~ ^[0-9]+$ ]] || exit 2</code>.</p>
+      <p class="note">Practise it: <a href="index.html#play/intcompare">integer expression expected</a> · <a href="index.html#fix/operand-expected">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="value-too-great-for-base">
+      <h3>value too great for base</h3>
+      <pre class="err-line"><code>./rotate.sh: line 4: 08: value too great for base (error token is &quot;08&quot;)</code></pre>
+      <h4>Symptom</h4>
+      <p>Arithmetic on dates or times works most of the month, then fails on the 8th or 9th, or at 08:00.</p>
+      <h4>Cause</h4>
+      <p>A leading zero makes bash read the number as octal, where 8 and 9 do not exist.</p>
+      <ul>
+        <li><code>$(date +%m)</code>, <code>%d</code> or <code>%H</code> used in arithmetic</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>echo $(( 07 )) $(( 010 ))</code></pre>
+      <h4>Fix</h4>
+      <p>Force base 10: <code>$(( 10#$month + 1 ))</code>, or ask date for no padding: <code>date +%-m</code>.</p>
+      <h4>Prevent</h4>
+      <p>Always use <code>10#</code> on zero-padded numbers.</p>
+      <p class="note">Practise it: <a href="index.html#play/octal">value too great for base</a> · <a href="index.html#fix/value-too-great-for-base">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="division-by-zero">
+      <h3>division by 0</h3>
+      <pre class="err-line"><code>./stats.sh: line 7: total / count: division by 0 (error token is &quot;count&quot;)</code></pre>
+      <h4>Symptom</h4>
+      <p>An average or percentage fails on an empty input.</p>
+      <h4>Cause</h4>
+      <p>The divisor evaluated to 0, often because a count was empty.</p>
+      <ul>
+        <li>No matching lines, so the count is 0</li>
+        <li>An unset variable, which arithmetic treats as 0</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>echo &quot;count=$count&quot;</code></pre>
+      <h4>Fix</h4>
+      <p>Check the divisor first: <code>(( count &gt; 0 )) &amp;&amp; echo $(( total / count ))</code>.</p>
+      <h4>Prevent</h4>
+      <p>Handle the empty case explicitly in reports.</p>
+      <p class="note"><a href="index.html#fix/division-by-zero">Open in Troubleshoot</a></p>
+    </section>
+    <h2 class="stage-h">Redirection</h2>
+    <section class="card problem" id="ambiguous-redirect">
+      <h3>ambiguous redirect</h3>
+      <pre class="err-line"><code>./backup.sh: line 5: $LOG: ambiguous redirect</code></pre>
+      <h4>Symptom</h4>
+      <p>A command with <code>&gt; $file</code> or <code>&gt;&gt; $LOG</code> is skipped with status 1.</p>
+      <h4>Cause</h4>
+      <p>The redirection target expanded to zero words (an empty variable) or several (a path with spaces).</p>
+      <ul>
+        <li>The variable is empty or unset</li>
+        <li>An unquoted path with spaces</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>declare -p &lt;NAME&gt;</code></pre>
+      <h4>Fix</h4>
+      <p>Quote it and make sure it is set: <code>&gt;&gt; &quot;${LOG:?}&quot;</code>.</p>
+      <h4>Prevent</h4>
+      <p>Quote every redirection target that holds a variable.</p>
+      <p class="note"><a href="index.html#fix/ambiguous-redirect">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="here-document-eof">
+      <h3>here-document delimited by end-of-file</h3>
+      <pre class="err-line"><code>./install.sh: line 12: warning: here-document at line 3 delimited by end-of-file (wanted `EOF')</code></pre>
+      <h4>Symptom</h4>
+      <p>Everything after a here-document becomes part of it, and the script ends early.</p>
+      <h4>Cause</h4>
+      <p>Bash never found the end marker of the here-document.</p>
+      <ul>
+        <li>The marker is indented (allowed only with <code>&lt;&lt;-</code> and tabs)</li>
+        <li>Trailing spaces or a <code>\r</code> after the marker</li>
+        <li>A different spelling: <code>EOF</code> versus <code>END</code></li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>grep -n 'EOF' &lt;script&gt; | cat -A</code></pre>
+      <h4>Fix</h4>
+      <p>Put the marker alone at the start of its line, with nothing after it.</p>
+      <h4>Prevent</h4>
+      <p>Use <code>&lt;&lt;'EOF'</code> when the body should not expand, and keep markers flush left.</p>
+      <p class="note">Practise it: <a href="index.html#play/heredoc">Here-document expands too early</a> · <a href="index.html#fix/here-document-eof">Open in Troubleshoot</a></p>
+    </section>
+    <h2 class="stage-h">Functions</h2>
+    <section class="card problem" id="return-numeric">
+      <h3>return: numeric argument required</h3>
+      <pre class="err-line"><code>./deploy.sh: line 3: return: production: numeric argument required</code></pre>
+      <h4>Symptom</h4>
+      <p>A function returns a string and the caller receives a number, often 2.</p>
+      <h4>Cause</h4>
+      <p><code>return</code> sets an exit status (0 to 255), not a value.</p>
+      <ul>
+        <li><code>return &quot;$value&quot;</code> used to hand back data</li>
+        <li>Also: <code>return</code> outside a function or sourced file is refused with its own error</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>grep -n return &lt;script&gt;</code></pre>
+      <h4>Fix</h4>
+      <p>Print the result and capture it: <code>get() { echo &quot;$value&quot;; }</code> and <code>v=$(get)</code>.</p>
+      <h4>Prevent</h4>
+      <p>Use <code>return</code> for success or failure only.</p>
+      <p class="note">Practise it: <a href="index.html#play/funcreturn">return: numeric argument required</a> · <a href="index.html#fix/return-numeric">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="local-outside-function">
+      <h3>local: can only be used in a function</h3>
+      <pre class="err-line"><code>./setup.sh: line 4: local: can only be used in a function</code></pre>
+      <h4>Symptom</h4>
+      <p>The assignment on that line does not happen.</p>
+      <h4>Cause</h4>
+      <p><code>local</code> declares a variable for the current function; at the top level there is none.</p>
+      <ul>
+        <li>Code moved out of a function</li>
+        <li>A one-liner pasted into the terminal</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>sed -n '1,10p' &lt;script&gt;</code></pre>
+      <h4>Fix</h4>
+      <p>Drop <code>local</code> at the top level, or wrap the code in a function.</p>
+      <h4>Prevent</h4>
+      <p>Keep script logic in a <code>main</code> function and call <code>main &quot;$@&quot;</code> at the end.</p>
+      <p class="note"><a href="index.html#fix/local-outside-function">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="illegal-option">
+      <h3>illegal option</h3>
+      <pre class="err-line"><code>./deploy.sh: illegal option -- x</code></pre>
+      <h4>Symptom</h4>
+      <p>getopts prints this and the option is ignored; or an option value goes missing (<code>option requires an argument -- e</code>).</p>
+      <h4>Cause</h4>
+      <p>The option is not in getopts' option string, or it needs a value and none was given.</p>
+      <ul>
+        <li>A letter missing from the option string</li>
+        <li>A missing <code>:</code> after an option that takes a value (<code>&quot;e&quot;</code> instead of <code>&quot;e:&quot;</code>)</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>grep -n getopts &lt;script&gt;</code></pre>
+      <h4>Fix</h4>
+      <p>Add the letter, with <code>:</code> after it if it takes a value, and <code>shift $((OPTIND - 1))</code> after the loop.</p>
+      <h4>Prevent</h4>
+      <p>Handle <code>?</code> and <code>:</code> in the case statement with a usage message and exit status 2.</p>
+      <p class="note">Practise it: <a href="index.html#play/getopts">Options are ignored</a> · <a href="index.html#fix/illegal-option">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="maximum-nesting">
+      <h3>maximum function nesting level exceeded</h3>
+      <pre class="err-line"><code>./lib.sh: line 4: log: maximum function nesting level exceeded (200)</code></pre>
+      <h4>Symptom</h4>
+      <p>A script recurses until bash stops it (or crashes, when FUNCNEST is unset).</p>
+      <h4>Cause</h4>
+      <p>A function calls itself without end, often because a wrapper has the same name as the command it wraps.</p>
+      <ul>
+        <li><code>ls() { ls --color &quot;$@&quot;; }</code> calling itself</li>
+        <li>Recursion without a stop condition</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>type &lt;name&gt;</code></pre>
+      <h4>Fix</h4>
+      <p>Call the real command with <code>command ls</code> inside the wrapper, or rename the function.</p>
+      <h4>Prevent</h4>
+      <p>Do not name functions after commands they call.</p>
+      <p class="note"><a href="index.html#fix/maximum-nesting">Open in Troubleshoot</a></p>
+    </section>
+    <h2 class="stage-h">Text tools</h2>
+    <section class="card problem" id="unknown-option-to-s">
+      <h3>sed: unknown option to `s'</h3>
+      <pre class="err-line"><code>sed: -e expression #1, char 13: unknown option to `s'</code></pre>
+      <h4>Symptom</h4>
+      <p>A <code>sed s/.../.../</code> command fails when a variable is involved.</p>
+      <h4>Cause</h4>
+      <p>The pattern or replacement contains the delimiter, usually <code>/</code> from a path or URL, which ends the command early.</p>
+      <ul>
+        <li><code>sed &quot;s/X/$PATH_VALUE/&quot;</code> with slashes in the value</li>
+        <li>A missing closing delimiter, which sed reports as an unterminated s command</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>echo &quot;s/X/$VALUE/&quot;</code></pre>
+      <h4>Fix</h4>
+      <p>Pick a delimiter not in the data: <code>sed &quot;s|X|$VALUE|&quot;</code>.</p>
+      <h4>Prevent</h4>
+      <p>Use <code>|</code> or <code>#</code> as the delimiter whenever values are paths or URLs.</p>
+      <p class="note">Practise it: <a href="index.html#play/sedslash">unknown option to `s'</a> · <a href="index.html#fix/unknown-option-to-s">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="find-paths-must-precede">
+      <h3>find: paths must precede expression</h3>
+      <pre class="err-line"><code>find: paths must precede expression: `test.log'</code></pre>
+      <h4>Symptom</h4>
+      <p>A find command works in one directory and fails in another, and find suggests a possible unquoted pattern after -name.</p>
+      <h4>Cause</h4>
+      <p>An unquoted pattern like <code>*.log</code> was expanded by the shell into several file names before find saw it.</p>
+      <ul>
+        <li><code>find . -name *.log</code> run where .log files exist</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>echo find . -name *.log</code></pre>
+      <h4>Fix</h4>
+      <p>Quote the pattern: <code>find . -name '*.log'</code>.</p>
+      <h4>Prevent</h4>
+      <p>Always quote patterns meant for another program.</p>
+      <p class="note">Practise it: <a href="index.html#play/findglob">find: paths must precede expression</a> · <a href="index.html#fix/find-paths-must-precede">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="cannot-stat">
+      <h3>cp: cannot stat</h3>
+      <pre class="err-line"><code>cp: cannot stat '/srv/reports/Q3': No such file or directory</code></pre>
+      <h4>Symptom</h4>
+      <p><code>cp</code>, <code>mv</code> or <code>ls</code> complain about a path that is only part of the real name.</p>
+      <h4>Cause</h4>
+      <p>The path was split on spaces (or globbed) because the variable holding it was not quoted.</p>
+      <ul>
+        <li><code>cp $SRC $DEST</code> with spaces in SRC</li>
+        <li>A file list built with <code>$(ls)</code> or <code>$(find)</code></li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>printf '[%s]\n' $SRC</code></pre>
+      <h4>Fix</h4>
+      <p>Quote: <code>cp -r -- &quot;$SRC&quot; &quot;$DEST/&quot;</code>. Loop over files with globs or <code>find -print0 | xargs -0</code>.</p>
+      <h4>Prevent</h4>
+      <p>Quote every variable that holds a path.</p>
+      <p class="note">Practise it: <a href="index.html#play/spaces">Spaces in a path</a> · <a href="index.html#play/forls">for f in $(ls)</a> · <a href="index.html#fix/cannot-stat">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="date-invalid">
+      <h3>date: invalid date</h3>
+      <pre class="err-line"><code>date: invalid date 'notAfter=Nov 15 12:00:00 2026 GMT'</code></pre>
+      <h4>Symptom</h4>
+      <p>Date arithmetic produces nonsense, such as a certificate that expires in -20756 days.</p>
+      <h4>Cause</h4>
+      <p><code>date -d</code> could not parse the text, so the command substitution was empty and the arithmetic used nothing.</p>
+      <ul>
+        <li>A label in front of the date (<code>notAfter=</code>)</li>
+        <li>A format GNU date does not read, or BSD date on macOS (<code>date -j -f</code>)</li>
+        <li>A carriage return at the end</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>printf '%q\n' &quot;$end&quot;
+date -d &quot;$end&quot; +%s</code></pre>
+      <h4>Fix</h4>
+      <p>Strip labels first (<code>${end#notAfter=}</code>), and check the result: <code>ts=$(date -d &quot;$end&quot; +%s) || exit 1</code>.</p>
+      <h4>Prevent</h4>
+      <p>Validate parsed values before arithmetic; a failed <code>$( )</code> inside <code>$(( ))</code> does not stop the script.</p>
+      <p class="note">Practise it: <a href="index.html#play/certexpiry">date: invalid date</a> · <a href="index.html#fix/date-invalid">Open in Troubleshoot</a></p>
+    </section>
+    <h2 class="stage-h">Jobs and signals</h2>
+    <section class="card problem" id="background-status-lost">
+      <h3>A failed background job did not fail the script</h3>
+      <pre class="err-line"><code>upload-region: us: 403 Forbidden ... and the script exits 0</code></pre>
+      <h4>Symptom</h4>
+      <p>Jobs started with <code>&amp;</code> fail, yet the script reports success and exits 0, even with <code>set -e</code>.</p>
+      <h4>Cause</h4>
+      <p>A background job's exit status only comes back through <code>wait PID</code> or <code>wait -n</code>. <code>wait</code> with no arguments always returns 0, and <code>set -e</code> never sees background jobs.</p>
+      <ul>
+        <li><code>cmd &amp; ... wait</code> with no PIDs</li>
+        <li>Not saving <code>$!</code> after each job</li>
+        <li>Expecting <code>set -e</code> to cover jobs</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>cmd &amp; p=$!; wait &quot;$p&quot;; echo $?
+jobs -l</code></pre>
+      <h4>Fix</h4>
+      <p>Save each PID (<code>pids+=($!)</code>) and wait for each one: <code>for p in &quot;${pids[@]}&quot;; do wait &quot;$p&quot; || failed=1; done</code>, then exit non-zero if any failed.</p>
+      <h4>Prevent</h4>
+      <p>Never use bare <code>wait</code> where failures matter; for many jobs use <code>xargs -P</code>, whose exit status (123) reports a failure.</p>
+      <p class="note">Practise it: <a href="index.html#play/parallelfail">A failed background job is lost</a> · <a href="index.html#fix/background-status-lost">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="wait-not-child">
+      <h3>wait: pid is not a child of this shell</h3>
+      <pre class="err-line"><code>./run.sh: line 7: wait: pid 4123 is not a child of this shell</code></pre>
+      <h4>Symptom</h4>
+      <p><code>wait</code> returns 127 straight away.</p>
+      <h4>Cause</h4>
+      <p>A shell can only wait for processes it started itself. The PID belongs to another shell, a subshell, or a process started by a different script.</p>
+      <ul>
+        <li>The job was started inside <code>( )</code>, a pipeline or <code>$( )</code>, so a subshell owns it</li>
+        <li>The PID came from a file or from <code>pgrep</code></li>
+        <li>The job was already waited for</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>jobs -l
+echo $!</code></pre>
+      <h4>Fix</h4>
+      <p>Start the job in the same shell that waits for it, and keep <code>$!</code> right after starting it. To wait for an unrelated process, poll with <code>while kill -0 &quot;$pid&quot;; do sleep 1; done</code>.</p>
+      <h4>Prevent</h4>
+      <p>Keep job control in one place: start, record and wait in the same function.</p>
+      <p class="note">Practise it: <a href="index.html#play/parallelfail">A failed background job is lost</a> · <a href="index.html#fix/wait-not-child">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="terminated">
+      <h3>Terminated</h3>
+      <pre class="err-line"><code>Terminated</code></pre>
+      <h4>Symptom</h4>
+      <p>A script or job stops part way and the shell prints Terminated (exit status 143), Hangup (129) or Killed (137).</p>
+      <h4>Cause</h4>
+      <p>A signal ended it: TERM from <code>kill</code>, <code>systemctl stop</code> or <code>timeout</code>; HUP when the terminal or SSH session went away; KILL from the OOM killer or <code>kill -9</code>. Its cleanup only ran if it had a trap.</p>
+      <ul>
+        <li>systemd stopping or restarting the service</li>
+        <li>The SSH session ending for a job started with <code>&amp;</code></li>
+        <li>A <code>timeout</code> limit</li>
+        <li>The out-of-memory killer (Killed, 137)</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>journalctl -u &lt;service&gt; | tail
+dmesg | grep -i 'killed process'
+echo $?</code></pre>
+      <h4>Fix</h4>
+      <p>Clean up in <code>trap '...' EXIT</code> (bash runs it on TERM, HUP and INT too), run long work with <code>nohup</code>, <code>setsid</code>, tmux or a systemd unit, and give it the memory it needs.</p>
+      <h4>Prevent</h4>
+      <p>Assume any script can be stopped at any line: register cleanup as soon as you create something, and make reruns safe.</p>
+      <p class="note">Practise it: <a href="index.html#play/trapterm">A stale lock after a stop</a> · <a href="index.html#play/nohup">The job died with the SSH session</a> · <a href="index.html#fix/terminated">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="nohup-ignoring-input">
+      <h3>nohup: ignoring input and appending output to 'nohup.out'</h3>
+      <pre class="err-line"><code>nohup: ignoring input and appending output to 'nohup.out'</code></pre>
+      <h4>Symptom</h4>
+      <p>nohup prints this and the command's output goes to a file instead of the terminal.</p>
+      <h4>Cause</h4>
+      <p>Not an error. Output to a terminal would be lost when the session ends, so nohup writes it to nohup.out in the current directory (or $HOME).</p>
+      <ul>
+        <li>Running <code>nohup cmd</code> without redirecting its output</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>tail nohup.out</code></pre>
+      <h4>Fix</h4>
+      <p>Choose where output goes: <code>nohup ./job.sh &gt; job.log 2&gt;&amp;1 &amp;</code>.</p>
+      <h4>Prevent</h4>
+      <p>Always redirect output of long-running jobs to a named log file.</p>
+      <p class="note">Practise it: <a href="index.html#play/nohup">The job died with the SSH session</a> · <a href="index.html#fix/nohup-ignoring-input">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="timeout-124">
+      <h3>Exit status 124 from timeout</h3>
+      <pre class="err-line"><code>curl: (28) Operation timed out after 10000 milliseconds with 0 bytes received</code></pre>
+      <h4>Symptom</h4>
+      <p>A command run under <code>timeout</code> ends with status 124, or curl reports (28) Operation timed out; or, without a limit, a cron job never finishes and copies pile up.</p>
+      <h4>Cause</h4>
+      <p>The command took longer than its limit. <code>timeout</code> sent it TERM and returned 124; <code>curl -m</code> gave up with 28. Without a limit, network calls can wait for a very long time.</p>
+      <ul>
+        <li>A server that accepts connections and never answers</li>
+        <li>A limit shorter than the work needs</li>
+        <li>No limit at all, so the job hangs</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>time &lt;command&gt;
+timeout 10 &lt;command&gt;; echo $?</code></pre>
+      <h4>Fix</h4>
+      <p>Give every network call a limit (<code>timeout 10 cmd</code> or <code>curl -m 10</code>) and treat 124 as a failure: <code>|| { echo 'timed out' &gt;&amp;2; exit 1; }</code>.</p>
+      <h4>Prevent</h4>
+      <p>Put a time limit on everything a cron job calls, and on the job itself.</p>
+      <p class="note">Practise it: <a href="index.html#play/timeout">A check that hangs for an hour</a> · <a href="index.html#fix/timeout-124">Open in Troubleshoot</a></p>
+    </section>
+    <h2 class="stage-h">Exit status</h2>
+    <section class="card problem" id="exit-status-codes">
+      <h3>What does exit status 126, 127, 130 or 137 mean?</h3>
+      <pre class="err-line"><code>(echo $? prints 1, 2, 126, 127, 128+n)</code></pre>
+      <h4>Symptom</h4>
+      <p>A job failed with a number and no message.</p>
+      <h4>Cause</h4>
+      <p>0 is success; 1 a general error; 2 misuse or a syntax error; 126 found but not executable; 127 not found; 128+n killed by signal n: 130 Ctrl+C, 137 SIGKILL (often the OOM killer), 143 SIGTERM.</p>
+      <ul>
+        <li>See the specific error entries above for 126 and 127</li>
+        <li>137 in containers usually means the memory limit was hit</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>echo $?
+dmesg | grep -i 'killed process'</code></pre>
+      <h4>Fix</h4>
+      <p>Act on the meaning: permissions for 126, PATH for 127, memory for 137.</p>
+      <h4>Prevent</h4>
+      <p>Have scripts exit with documented codes (0 ok, 1 failure, 2 bad usage).</p>
+      <p class="note">Practise it: <a href="index.html#play/noexec">Permission denied</a> · <a href="index.html#play/typo">command not found</a> · <a href="index.html#fix/exit-status-codes">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="exits-silently">
+      <h3>Script exits silently with set -e</h3>
+      <pre class="err-line"><code>(no message; exit status 1)</code></pre>
+      <h4>Symptom</h4>
+      <p>A script with <code>set -e</code> stops part way with no error message.</p>
+      <h4>Cause</h4>
+      <p>Some command returned non-zero and <code>set -e</code> ended the script. The command itself printed nothing.</p>
+      <ul>
+        <li><code>grep</code> found nothing (status 1)</li>
+        <li><code>(( count++ ))</code> or <code>let</code> when the value was 0</li>
+        <li><code>[ cond ] &amp;&amp; action</code> as the last line of a function, when cond is false</li>
+        <li><code>diff</code> found differences</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>bash -x &lt;script&gt; 2&gt;&amp;1 | tail -5
+trap 'echo &quot;failed at line $LINENO: $BASH_COMMAND&quot; &gt;&amp;2' ERR</code></pre>
+      <h4>Fix</h4>
+      <p>Add <code>|| true</code> where failure is fine, use <code>count=$((count + 1))</code>, and write <code>if cond; then action; fi</code> instead of <code>cond &amp;&amp; action</code>.</p>
+      <h4>Prevent</h4>
+      <p>Add an ERR trap that prints the line, so silent exits are never silent.</p>
+      <p class="note">Practise it: <a href="index.html#play/grepset">A clean day kills the script</a> · <a href="index.html#play/arithexit">((count++)) ends the script</a> · <a href="index.html#fix/exits-silently">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="set-e-did-not-stop">
+      <h3>set -e did not stop the script</h3>
+      <pre class="err-line"><code>(the script reports success after a failure)</code></pre>
+      <h4>Symptom</h4>
+      <p>A step failed, yet the script carried on and said it succeeded.</p>
+      <h4>Cause</h4>
+      <p><code>set -e</code> ignores failures in many places: inside pipelines (except the last command), in <code>if</code> and <code>while</code> conditions, left of <code>&amp;&amp;</code> and <code>||</code>, in <code>local x=$(cmd)</code>, and after <code>cd</code> that you did not check.</p>
+      <ul>
+        <li><code>cmd | gzip &gt; file</code> without pipefail</li>
+        <li><code>local x=$(cmd)</code> hiding cmd's status</li>
+        <li><code>$?</code> read after another command</li>
+        <li>A failed <code>cd</code> followed by more commands</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>echo &quot;${PIPESTATUS[@]}&quot;
+bash -x &lt;script&gt;</code></pre>
+      <h4>Fix</h4>
+      <p>Use <code>set -euo pipefail</code>, declare then assign (<code>local x; x=$(cmd)</code>), test commands directly with <code>if</code>, and <code>cd dir || exit 1</code>.</p>
+      <h4>Prevent</h4>
+      <p>Do not rely on <code>set -e</code> alone; check the steps that matter explicitly.</p>
+      <p class="note">Practise it: <a href="index.html#play/pipefail">set -e and a pipeline</a> · <a href="index.html#play/localmask">local hides a failure</a> · <a href="index.html#play/statusover">$? read too late</a> · <a href="index.html#play/cdfail">cd failed, rm ran anyway</a> · <a href="index.html#fix/set-e-did-not-stop">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="variable-empty-after-loop">
+      <h3>A variable is empty after a loop</h3>
+      <pre class="err-line"><code>(a counter or list set in the loop is gone afterwards)</code></pre>
+      <h4>Symptom</h4>
+      <p>A total or list built in a <code>while read</code> loop is 0 or empty after it, though the loop clearly ran.</p>
+      <h4>Cause</h4>
+      <p>The loop was on the right of a pipe, so it ran in a subshell. Its variables died with it, and so does an <code>exit</code> inside it.</p>
+      <ul>
+        <li><code>cmd | while read ...; do total=...; done</code></li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>grep -n '| while' &lt;script&gt;</code></pre>
+      <h4>Fix</h4>
+      <p>Redirect into the loop instead: <code>while read ...; done &lt; file</code> or <code>done &lt; &lt;(cmd)</code>.</p>
+      <h4>Prevent</h4>
+      <p>Avoid piping into loops that set variables or call exit, and give commands inside read loops their own input (<code>ssh -n</code>).</p>
+      <p class="note">Practise it: <a href="index.html#play/pipesub">A counter stays at 0</a> · <a href="index.html#play/exitpipe">exit in a piped loop</a> · <a href="index.html#play/sshloop">ssh eats the loop's input</a> · <a href="index.html#fix/variable-empty-after-loop">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="last-line-missing">
+      <h3>The last line of a file is skipped</h3>
+      <pre class="err-line"><code>(while read never sees the final line)</code></pre>
+      <h4>Symptom</h4>
+      <p>A <code>while read</code> loop handles every line but the last.</p>
+      <h4>Cause</h4>
+      <p>The file does not end with a newline. <code>read</code> fills the variable but returns 1, which ends the loop.</p>
+      <ul>
+        <li>Files written by editors, exports or <code>printf</code> without a final newline</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>tail -c 1 &lt;file&gt; | od -c
+cat -A &lt;file&gt; | tail -1</code></pre>
+      <h4>Fix</h4>
+      <p><code>while read -r line || [[ -n $line ]]; do</code>.</p>
+      <h4>Prevent</h4>
+      <p>Use that loop form for any file you did not write yourself.</p>
+      <p class="note">Practise it: <a href="index.html#play/lastline">The last line is skipped</a> · <a href="index.html#fix/last-line-missing">Open in Troubleshoot</a></p>
+    </section>
+    <h2 class="stage-h">Cron and environment</h2>
+    <section class="card problem" id="works-in-terminal-not-cron">
+      <h3>Works in the terminal, fails from cron</h3>
+      <pre class="err-line"><code>(cron mails an error, or the job does nothing)</code></pre>
+      <h4>Symptom</h4>
+      <p>A script works every time you run it, and fails when cron runs it.</p>
+      <h4>Cause</h4>
+      <p>Cron runs jobs with <code>/bin/sh</code>, <code>PATH=/usr/bin:/bin</code>, your home directory as the working directory, and none of your profile or <code>.bashrc</code>.</p>
+      <ul>
+        <li>A program outside /usr/bin and /bin</li>
+        <li>Variables exported in <code>.bashrc</code></li>
+        <li>Relative paths</li>
+        <li>No <code>#!</code> line, so sh runs it</li>
+        <li><code>%</code> in the crontab line, which cron turns into a newline</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>env -i HOME=$HOME PATH=/usr/bin:/bin /bin/sh -c '/path/to/script.sh'
+grep CRON /var/log/syslog | tail</code></pre>
+      <h4>Fix</h4>
+      <p>Set PATH in the script, load its own config by absolute path, use absolute paths, add a <code>#!</code> line, and escape <code>%</code> as <code>\%</code> in crontab.</p>
+      <h4>Prevent</h4>
+      <p>Test every cron job with <code>env -i</code> before adding it, and send its output to a log: <code>&gt;&gt; /var/log/job.log 2&gt;&amp;1</code>.</p>
+      <p class="note">Practise it: <a href="index.html#play/cronpath">Works in the terminal, not in cron</a> · <a href="index.html#play/cronenv">A variable from .bashrc</a> · <a href="index.html#play/noshebang">[[: not found</a> · <a href="index.html#play/sourcepath">source finds nothing from cron</a> · <a href="index.html#play/rmempty">rm -rf with an empty variable</a> · <a href="index.html#fix/works-in-terminal-not-cron">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="curl-errors">
+      <h3>curl: (22) The requested URL returned error</h3>
+      <pre class="err-line"><code>curl: (22) The requested URL returned error: 503</code></pre>
+      <h4>Symptom</h4>
+      <p>A download or API call fails in a script; also <code>curl: (6) Could not resolve host</code> and <code>curl: (7) Failed to connect</code>.</p>
+      <h4>Cause</h4>
+      <p>With <code>-f</code>, curl turns HTTP errors into exit status 22. 6 is DNS, 7 is a refused connection, 28 a timeout.</p>
+      <ul>
+        <li>The server is down or busy (503)</li>
+        <li>A wrong host name, or no DNS from that machine</li>
+        <li>A firewall or the service not listening</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>curl -sS -o /dev/null -w '%{http_code}\n' &lt;url&gt;
+getent hosts &lt;host&gt;</code></pre>
+      <h4>Fix</h4>
+      <p>Retry transient errors (5xx, 429, timeouts) with a limit and backoff; fail fast on 4xx.</p>
+      <h4>Prevent</h4>
+      <p>Always use <code>curl -fsS</code> in scripts so errors are not mistaken for content.</p>
+      <p class="note">Practise it: <a href="index.html#play/retry">Retry with backoff</a> · <a href="index.html#play/curlfail">curl says success on a 500</a> · <a href="index.html#play/emptytest">unary operator expected</a> · <a href="index.html#fix/curl-errors">Open in Troubleshoot</a></p>
+    </section>
+  </main>
+  <footer class="foot">
+    <div class="wrap foot-base">
+      <p>© 2024–2026 Sandeep Komal Pothu and contributors. Open source under the MIT License.</p>
+      <p class="foot-tm">Bash is a GNU project of the Free Software Foundation. This project is independent and not affiliated with the FSF or the GNU project.</p>
+    </div>
+  </footer>
+</body>
+</html>
