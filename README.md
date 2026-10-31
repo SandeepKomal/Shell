@@ -56,7 +56,7 @@ node tests/check_playground.js    # every scenario starts broken; wrong moves fa
 node tests/check_bash_parity.js   # the playground's bash prints what bash 5.2 prints
 node tests/check_xray.js          # X-ray rules
 node tests/fuzz_playground.js     # thousands of random commands, no exceptions
-node tools/build_problems.js      # regenerate site/problems.html after editing Troubleshoot entries
+node tools/build_problems.js      # regenerate site/problems.html and site/scenario-index.js after editing Troubleshoot entries, scenarios or X-ray rules
 ```
 
 ## What's in this repository
@@ -269,7 +269,7 @@ Shell/
 ├── System Uptime Check/
 ├── Automatic Package Updates/
 ├── site/                 # DevOps Nimbus Bash and shell, the learning site (GitHub Pages)
-├── tools/                # build_problems.js for site/problems.html
+├── tools/                # build_problems.js for site/problems.html and site/scenario-index.js
 ├── tests/                # test_scripts.sh and the site's node tests
 ├── PRIVACY.md            # privacy policy (India's DPDP Act)
 ├── scripts/

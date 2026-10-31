@@ -176,6 +176,7 @@ assert.ok(html.includes(`${SCENARIOS.length} incidents in a bash playground`), "
 assert.match(html, /© 2024–2026 Sandeep Komal Pothu and contributors\./);
 assert.match(html, /id="forget"/, "a Clear it button");
 assert.strictEqual(problems, require(path.join(root, "tools/build_problems.js")).build(), "site/problems.html is current: run node tools/build_problems.js");
+assert.strictEqual(fs.readFileSync(path.join(root, "site/scenario-index.js"), "utf8"), require(path.join(root, "tools/build_problems.js")).scenarioIndex(), "site/scenario-index.js is current: run node tools/build_problems.js");
 for (const d of Q.doctor) assert.ok(problems.includes(`id="${d.id}"`) && problems.includes(d.error.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")), `problems.html has ${d.id} and its error text`);
 assert.match(fs.readFileSync(path.join(root, "site/robots.txt"), "utf8"), /Sitemap: https:\/\/sandeepkomal\.github\.io\/Shell\/sitemap\.xml/);
 const sitemap = fs.readFileSync(path.join(root, "site/sitemap.xml"), "utf8");
