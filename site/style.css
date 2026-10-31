@@ -287,6 +287,13 @@ select:focus, input[type="search"]:focus { border-color: var(--accent); outline:
 .doctor-group-items { display: flex; flex-wrap: wrap; gap: 8px; }
 .doctor-group .chip { font-family: var(--mono); font-size: .8rem; text-align: left; }
 .doctor-group .chip[hidden] { display: none; }
+.no-answer { margin: 0 0 20px; padding: 20px 22px; background: var(--surface); border: 1px solid var(--hair); border-radius: var(--radius); box-shadow: var(--shadow); }
+.no-answer[hidden], .doctor-groups[hidden] { display: none; }
+.no-answer h3 { margin: 0 0 4px; font-size: 1.05rem; }
+.no-answer p { margin: 0; }
+.no-answer-related { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.no-answer-related:not(:empty) { margin-top: 14px; }
+.no-answer-related .chip { font-family: var(--mono); font-size: .8rem; text-align: left; }
 #doctor-out { scroll-margin-top: 72px; }
 .problem h3 { margin: 0 0 4px; font: 600 1.2rem var(--mono); letter-spacing: 0; }
 .problem h4 { margin: 20px 0 6px; font-size: .86rem; color: var(--muted); font-weight: 600; letter-spacing: 0; }

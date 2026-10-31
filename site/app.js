@@ -394,33 +394,35 @@
 
   // --- Troubleshoot --------------------------------------------------------------
 
-  const scoreDoctor = (d, query) => window.SQSearch.score(d, query);
   function buildDoctorList() {
     const index = new Map(Q.doctor.map((d, i) => [d.id, i]));
     $("#doctor-list").replaceChildren(...Q.doctorGroups.map(([name, ids]) => h("div.doctor-group", null,
       h("div.doctor-group-name", null, name, h("span.count", null, String(ids.length))),
-      h("div.doctor-group-items", null, ids.map((id) => h("button.chip", { type: "button", "data-index": index.get(id), "aria-pressed": "false", onclick: () => { location.hash = "fix/" + id; } }, Q.doctor[index.get(id)].title))))));
+      h("div.doctor-group-items", null, ids.map((id) => doctorChip(index.get(id)))))));
   }
+  const doctorChip = (i) => h("button.chip", { type: "button", "data-index": i, "aria-pressed": "false", onclick: () => { location.hash = "fix/" + Q.doctor[i].id; } }, Q.doctor[i].title);
+  // An answer opens only when the pasted text holds that entry's own error line
+  // (search.js). Otherwise the page says there is no exact answer, and offers at
+  // most a few related entries, labelled as such.
   function filterDoctor() {
     const query = $("#doctor-q").value.trim();
-    let best = null;
-    let shown = 0;
+    const found = window.SQSearch.find(Q.doctor, query);
+    const shown = new Set(found.strong.length ? found.strong : found.keyword);
     for (const group of document.querySelectorAll(".doctor-group")) {
       let n = 0;
       for (const b of group.querySelectorAll("button")) {
-        const i = Number(b.dataset.index);
-        const s = scoreDoctor(Q.doctor[i], query);
-        b.hidden = query !== "" && s < 0.5;
+        b.hidden = query !== "" && !shown.has(Number(b.dataset.index));
         if (!b.hidden) n++;
-        if (query && (!best || s > best.s)) best = { i, s };
       }
       group.hidden = !n;
       group.querySelector(".count").textContent = String(n);
-      shown += n;
     }
-    $("#doctor-none").hidden = shown > 0;
-    // A pasted error that clearly matches one entry opens it.
-    if (best && best.s >= 2.4) renderDoctor(best.i);
+    const none = !!query && !shown.size;
+    $("#doctor-list").hidden = none;
+    $("#doctor-none").hidden = !none;
+    $("#doctor-related").replaceChildren(...(found.related.length ? [h("span.muted", null, "Related, may not apply:"), ...found.related.map(doctorChip)] : []));
+    if (found.answer !== null) renderDoctor(found.answer);
+    else if (query) $("#doctor-out").replaceChildren();
   }
   function renderDoctor(index) {
     const d = Q.doctor[index];
@@ -565,7 +567,10 @@
   $("#xray-edit-btn").addEventListener("click", () => { pasted = null; showXray(); $("#xray-input").focus(); });
   $("#xray-clear").addEventListener("click", () => { pasted = null; $("#xray-input").value = ""; showXray(); $("#xray-input").focus(); });
   buildDoctorList();
-  $("#doctor-list").after(h("p.muted", { id: "doctor-none", hidden: true }, "No entry matches. Try fewer words, or one word from the error, such as unbound or operand."));
+  $("#doctor-list").after(h("div.no-answer", { id: "doctor-none", hidden: true, "aria-live": "polite" },
+    h("h3", null, "No exact answer for this error yet"),
+    h("p.muted", null, "Search with the key line of the error, the one that names the problem, such as unbound variable or command not found."),
+    h("div.no-answer-related", { id: "doctor-related" })));
   $("#doctor-q").addEventListener("input", filterDoctor);
   // The home page's "Something broken?" box hands the pasted error to Troubleshoot.
   const doorGo = () => { $("#doctor-q").value = $("#door-q").value; go("doctor", () => { filterDoctor(); $("#doctor-q").focus(); }); };
