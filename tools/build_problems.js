@@ -8,7 +8,7 @@ const path = require("path");
 const root = path.resolve(__dirname, "..");
 global.window = global.window || {};
 for (const f of ["data", "bash", "builtins", "coreutils", "scenarios"]) require(path.join(root, `site/${f}.js`));
-const Q = window.QUEST;
+const Q = window.TRACK;
 const titles = Object.fromEntries(window.ShellScenarios.SCENARIOS.map((s) => [s.id, s.title]));
 
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -56,12 +56,12 @@ ${d.causes.map((c) => `        <li>${rich(c)}</li>`).join("\n")}
   <link rel="canonical" href="${Q.site}problems.html">
   <title>Bash errors explained</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
 <body>
   <header class="top">
     <div class="wrap top-inner">
-      <a class="brand" href="index.html"><img src="logo.svg" alt="" width="22" height="22"> Shell Quest</a>
+      <a class="brand" href="index.html" aria-label="DevOps Nimbus Bash, home"><img class="mark" src="nimbus.svg" alt="" width="37" height="22"> DevOps Nimbus <span class="brand-track">Bash</span></a>
     </div>
   </header>
   <main class="wrap">
