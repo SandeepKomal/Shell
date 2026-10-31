@@ -1,0 +1,480 @@
+{
+ "_about": "Pasted errors for the Troubleshoot search. onTopic: the entry id that must come first (null: no entry fits, so no answer may open). offTopic: errors from other tools that must not open an answer or show as a match.",
+ "onTopic": [
+  {
+   "text": "+ ehco 'starting backup'\n/usr/local/bin/backup.sh: line 12: ehco: command not found",
+   "expect": "command-not-found"
+  },
+  {
+   "text": "-bash: kubectl: command not found",
+   "expect": "command-not-found"
+  },
+  {
+   "text": "Oct 31 02:00:01 web-01 CRON[23145]: (root) CMD (/opt/jobs/sync.sh)\n/opt/jobs/sync.sh: line 8: aws: command not found",
+   "expect": "command-not-found"
+  },
+  {
+   "text": "./start.sh: line 4: PORT: command not found",
+   "expect": "command-not-found"
+  },
+  {
+   "text": "-bash: ./build.sh: Permission denied",
+   "expect": "permission-denied"
+  },
+  {
+   "text": "$ ./scripts/release.sh\nbash: ./scripts/release.sh: Permission denied\n$ echo $?\n126",
+   "expect": "permission-denied"
+  },
+  {
+   "text": "/bin/sh: 1: /tmp/install.sh: Permission denied",
+   "expect": "permission-denied"
+  },
+  {
+   "text": "bash: line 1: /etc/hosts: Permission denied",
+   "expect": "permission-denied"
+  },
+  {
+   "text": "/srv/jobs/nightly.sh: line 3: ./config/env.sh: No such file or directory",
+   "expect": "no-such-file"
+  },
+  {
+   "text": "-bash: cd: /var/www/my: No such file or directory",
+   "expect": "no-such-file"
+  },
+  {
+   "text": "bash: /var/log/app/run.log: No such file or directory",
+   "expect": "no-such-file"
+  },
+  {
+   "text": "-bash: ./install.sh: /bin/bash^M: bad interpreter: No such file or directory",
+   "expect": "required-file-not-found"
+  },
+  {
+   "text": "bash: ./setup.sh: cannot execute: required file not found",
+   "expect": "required-file-not-found"
+  },
+  {
+   "text": "/usr/bin/env: ‘bash\\r’: No such file or directory",
+   "expect": "required-file-not-found"
+  },
+  {
+   "text": "build.sh: line 4: $'\\r': command not found\nbuild.sh: line 9: syntax error near unexpected token `$'do\\r''\nbuild.sh: line 9: `do\\r'",
+   "expect": "carriage-return"
+  },
+  {
+   "text": "./provision.sh: line 2: $'\\r': command not found",
+   "expect": "carriage-return"
+  },
+  {
+   "text": "./release.sh: line 22: syntax error near unexpected token `else'\n./release.sh: line 22: `  else'",
+   "expect": "syntax-error-token"
+  },
+  {
+   "text": "bash: -c: line 1: syntax error near unexpected token `)'",
+   "expect": "syntax-error-token"
+  },
+  {
+   "text": "/opt/ci/build.sh: line 87: syntax error: unexpected end of file",
+   "expect": "unexpected-end-of-file"
+  },
+  {
+   "text": "./notify.sh: line 5: unexpected EOF while looking for matching `''\n./notify.sh: line 9: syntax error: unexpected end of file",
+   "expect": "unexpected-eof-matching"
+  },
+  {
+   "text": "2026-10-31T02:00:03Z deploy[4812]: /srv/deploy/run.sh: line 14: 1: unbound variable",
+   "expect": "unbound-variable"
+  },
+  {
+   "text": "./backup.sh: line 9: BACKUP_DIR: unbound variable",
+   "expect": "unbound-variable"
+  },
+  {
+   "text": "./migrate.sh: line 6: DB_URL: parameter null or not set",
+   "expect": "parameter-null"
+  },
+  {
+   "text": "./check_disk.sh: line 11: [: =: unary operator expected",
+   "expect": "unary-operator-expected"
+  },
+  {
+   "text": "./watch.sh: line 14: [: app-01: binary operator expected",
+   "expect": "binary-operator-expected"
+  },
+  {
+   "text": "./cleanup.sh: line 7: [: too many arguments",
+   "expect": "too-many-arguments"
+  },
+  {
+   "text": "./disk_alert.sh: line 5: [: 87%: integer expression expected",
+   "expect": "integer-expression-expected"
+  },
+  {
+   "text": "./math.sh: line 4: + 1: syntax error: operand expected (error token is \"+ 1\")",
+   "expect": "operand-expected"
+  },
+  {
+   "text": "./schedule.sh: line 12: 09: value too great for base (error token is \"09\")",
+   "expect": "value-too-great-for-base"
+  },
+  {
+   "text": "./avg.sh: line 9: sum / n: division by 0 (error token is \"n\")",
+   "expect": "division-by-zero"
+  },
+  {
+   "text": "/home/ci/version.sh: 7: Bad substitution",
+   "expect": "bad-substitution"
+  },
+  {
+   "text": "./archive.sh: line 18: $OUTFILE: ambiguous redirect",
+   "expect": "ambiguous-redirect"
+  },
+  {
+   "text": "./env.sh: line 12: PATH_ROOT: readonly variable",
+   "expect": "readonly-variable"
+  },
+  {
+   "text": "./lib.sh: line 20: return: ok: numeric argument required",
+   "expect": "return-numeric"
+  },
+  {
+   "text": "./init.sh: line 2: local: can only be used in a function",
+   "expect": "local-outside-function"
+  },
+  {
+   "text": "./setup.sh: line 5: export: `APP-NAME=web': not a valid identifier",
+   "expect": "not-valid-identifier"
+  },
+  {
+   "text": "/opt/jobs/report.sh: 12: [[: not found",
+   "expect": "dash-not-found"
+  },
+  {
+   "text": "sh: 3: source: not found",
+   "expect": "dash-not-found"
+  },
+  {
+   "text": "./deploy.sh: 4: [: x: unexpected operator",
+   "expect": "dash-not-found"
+  },
+  {
+   "text": "sed: -e expression #1, char 22: unknown option to `s'",
+   "expect": "unknown-option-to-s"
+  },
+  {
+   "text": "find: paths must precede expression: `access.log'\nfind: possible unquoted pattern after predicate `-name'?",
+   "expect": "find-paths-must-precede"
+  },
+  {
+   "text": "cp: cannot stat '/backups/db-*.sql.gz': No such file or directory",
+   "expect": "cannot-stat"
+  },
+  {
+   "text": "-bash: /bin/rm: Argument list too long",
+   "expect": "argument-list-too-long"
+  },
+  {
+   "text": "my script exits silently with no error message",
+   "expect": "exits-silently"
+  },
+  {
+   "text": "set -e did not stop the script after a command failed",
+   "expect": "set-e-did-not-stop"
+  },
+  {
+   "text": "the variable is empty after the while loop",
+   "expect": "variable-empty-after-loop"
+  },
+  {
+   "text": "while read loop skips the last line of the file",
+   "expect": "last-line-missing"
+  },
+  {
+   "text": "the script works when I run it by hand but not from crontab",
+   "expect": "works-in-terminal-not-cron"
+  },
+  {
+   "text": "./setup.sh: line 40: warning: here-document at line 22 delimited by end-of-file (wanted `END')",
+   "expect": "here-document-eof"
+  },
+  {
+   "text": "./backup.sh: illegal option -- z\nUsage: backup.sh [-k keep] [-d dir]",
+   "expect": "illegal-option"
+  },
+  {
+   "text": "./run.sh: option requires an argument -- e",
+   "expect": "illegal-option"
+  },
+  {
+   "text": "curl: (6) Could not resolve host: api.example.internal",
+   "expect": "curl-errors"
+  },
+  {
+   "text": "curl: (7) Failed to connect to localhost port 8080 after 0 ms: Connection refused",
+   "expect": "curl-errors"
+  },
+  {
+   "text": "[2026-10-31 02:15:09] ERROR health check failed\ncurl: (22) The requested URL returned error: 404",
+   "expect": "curl-errors"
+  },
+  {
+   "text": "./import.sh: line 3:  4123 Killed                  python3 load.py",
+   "expect": "exit-status-codes"
+  },
+  {
+   "text": "Last State:     Terminated\n  Reason:       OOMKilled\n  Exit Code:    137",
+   "expect": "exit-status-codes"
+  },
+  {
+   "text": "the job failed with exit code 137",
+   "expect": "exit-status-codes"
+  },
+  {
+   "text": "one of the background jobs failed but wait returned 0 and the script exited 0",
+   "expect": "background-status-lost"
+  },
+  {
+   "text": "./deploy_all.sh: line 30: wait: pid 9981 is not a child of this shell",
+   "expect": "wait-not-child"
+  },
+  {
+   "text": "./long_job.sh: line 12: 23456 Terminated              rsync -a /data /backup",
+   "expect": "terminated"
+  },
+  {
+   "text": "the job exited with status 143",
+   "expect": "terminated"
+  },
+  {
+   "text": "nohup: ignoring input and appending output to '/home/deploy/nohup.out'",
+   "expect": "nohup-ignoring-input"
+  },
+  {
+   "text": "curl: (28) Connection timed out after 5001 milliseconds",
+   "expect": "timeout-124"
+  },
+  {
+   "text": "timeout 30 ./sync.sh exited with status 124",
+   "expect": "timeout-124"
+  },
+  {
+   "text": "date: invalid date ‘next tuesdayy’",
+   "expect": "date-invalid"
+  },
+  {
+   "text": "after setting IFS=, the for loop no longer splits words",
+   "expect": "ifs-changed"
+  },
+  {
+   "text": "./lib.sh: line 10: retry: maximum function nesting level exceeded (1000)",
+   "expect": "maximum-nesting"
+  },
+  {
+   "text": "upload failed: ./backup.tar.gz to s3://example-backups/backup.tar.gz Unable to locate credentials",
+   "expect": "aws-no-credentials"
+  },
+  {
+   "text": "An error occurred (ExpiredToken) when calling the ListBuckets operation: The provided token has expired.",
+   "expect": "aws-expired-token"
+  },
+  {
+   "text": "aws s3 sync --delete removed the old backups in the bucket",
+   "expect": "s3-sync-delete"
+  },
+  {
+   "text": "pg_dump: error: aborting because of server version mismatch\npg_dump: detail: server version: 16.4; pg_dump version: 14.13",
+   "expect": "pg-dump-version-mismatch"
+  },
+  {
+   "text": "psql: error: connection to server at \"db.example.internal\" (10.0.4.21), port 5432 failed: fe_sendauth: no password supplied",
+   "expect": "pg-no-password"
+  },
+  {
+   "text": "2026-10-31 02:00:01 mysqldump: Error: 'Access denied; you need (at least one of) the PROCESS privilege(s) for this operation' when trying to dump tablespaces",
+   "expect": "mysqldump-process-privilege"
+  },
+  {
+   "text": "mysql: [Warning] Using a password on the command line interface can be insecure.",
+   "expect": "mysql-password-cli"
+  },
+  {
+   "text": "Waiting for deployment \"web\" rollout to finish: 1 of 3 updated replicas are available...\nerror: deployment \"web\" exceeded its progress deadline",
+   "expect": "k8s-progress-deadline"
+  },
+  {
+   "text": "evicting pod shop/api-5d8f7c-abcde\nerror when evicting pods/\"api-5d8f7c-abcde\" -n \"shop\" (will retry after 5s): Cannot evict pod as it would violate the pod's disruption budget.",
+   "expect": "k8s-drain-pdb"
+  },
+  {
+   "text": "error: unable to drain node \"node-2\" due to error: cannot delete Pods with local storage (use --delete-emptydir-data to override): app/redis-0",
+   "expect": "k8s-drain-local-storage"
+  },
+  {
+   "text": "error: unable to drain node \"node-2\": cannot delete Pods declare no controller (use --force to override): default/tmp-shell",
+   "expect": "k8s-drain-no-controller"
+  },
+  {
+   "text": "No ECDSA host key is known for web-03 and you have requested strict checking.\nHost key verification failed.",
+   "expect": "ssh-host-key-verification"
+  },
+  {
+   "text": "app@10.0.1.5: Permission denied (publickey,gssapi-keyex,gssapi-with-mic).",
+   "expect": "ssh-publickey-denied"
+  },
+  {
+   "text": "nginx: [emerg] \"server\" directive is not allowed here in /etc/nginx/conf.d/app.conf:3\nnginx: configuration file /etc/nginx/nginx.conf test failed",
+   "expect": "nginx-emerg"
+  },
+  {
+   "text": "terraform plan -detailed-exitcode returned 2 in CI",
+   "expect": "terraform-exit-2"
+  },
+  {
+   "text": "╷\n│ Error: Error acquiring the state lock\n│ \n│ Error message: ConditionalCheckFailedException: The conditional request failed\n│ Lock Info:\n│   ID:        1b2c3d4e-0000-4000-8000-000000000000",
+   "expect": "terraform-state-lock"
+  },
+  {
+   "text": "we found PII in application logs",
+   "expect": "personal-data-in-logs"
+  },
+  {
+   "text": "real customer data copied into the staging database",
+   "expect": "test-data-from-production"
+  },
+  {
+   "text": "our database backups are world-readable on the host",
+   "expect": "unencrypted-backups"
+  },
+  {
+   "text": "personal data kept forever with no retention limit",
+   "expect": "no-retention-limit"
+  },
+  {
+   "text": "./check.sh: line 8: [: missing `]'",
+   "expect": "missing-bracket"
+  },
+  {
+   "text": "bash: ./node_exporter: cannot execute binary file: Exec format error",
+   "expect": "exec-format-error"
+  },
+  {
+   "text": "exec /usr/local/bin/entrypoint.sh: exec format error",
+   "expect": "exec-format-error"
+  },
+  {
+   "text": "cp: error writing '/var/backups/db.sql': No space left on device",
+   "expect": "no-space-left"
+  },
+  {
+   "text": "bash: cannot create temp file for here-document: No space left on device",
+   "expect": "no-space-left"
+  },
+  {
+   "text": "sudo: a terminal is required to read the password; either use the -S option to read from standard input or configure an askpass helper\nsudo: a password is required",
+   "expect": "sudo-needs-terminal"
+  },
+  {
+   "text": "yes: standard output: Broken pipe\n+ echo 141",
+   "expect": "broken-pipe"
+  },
+  {
+   "text": "cat: write error: Broken pipe",
+   "expect": "broken-pipe"
+  },
+  {
+   "text": "jq: parse error: Invalid numeric literal at line 1, column 10",
+   "expect": "jq-parse-error"
+  },
+  {
+   "text": "parse error: Invalid numeric literal at line 2, column 0",
+   "expect": "jq-parse-error"
+  },
+  {
+   "text": "jq: error (at <stdin>:3): Cannot index array with string \"name\"",
+   "expect": "jq-cannot-index"
+  },
+  {
+   "text": "jq: error (at <stdin>:0): Cannot iterate over null (null)",
+   "expect": "jq-cannot-index"
+  },
+  {
+   "text": "-bash: !\": event not found",
+   "expect": "event-not-found"
+  },
+  {
+   "text": "./sync.sh: line 3: declare: -A: invalid option\ndeclare: usage: declare [-afFirtx] [-p] [name[=value] ...]",
+   "expect": "old-bash-macos"
+  },
+  {
+   "text": "./collect.sh: line 7: mapfile: command not found",
+   "expect": "old-bash-macos"
+  },
+  {
+   "text": "ssh: connect to host 10.0.2.7 port 22: Connection refused",
+   "expect": "ssh-connect-failed"
+  },
+  {
+   "text": "ssh: connect to host web-04 port 22: Connection timed out",
+   "expect": "ssh-connect-failed"
+  },
+  {
+   "text": "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\nPermissions 0644 for '/home/deploy/.ssh/id_ed25519' are too open.\nIt is required that your private key files are NOT accessible by others.\nThis private key will be ignored.\nLoad key \"/home/deploy/.ssh/id_ed25519\": bad permissions\ndeploy@web-01: Permission denied (publickey).",
+   "expect": "ssh-key-too-open"
+  },
+  {
+   "text": "bash: fork: retry: Resource temporarily unavailable",
+   "expect": "fork-unavailable"
+  },
+  {
+   "text": "bash: line 1: x: bad array subscript",
+   "expect": "bad-array-subscript"
+  },
+  {
+   "text": "xargs: unmatched single quote; by default quotes are special to xargs unless you use the -0 option",
+   "expect": null
+  },
+  {
+   "text": "rsync error: some files/attrs were not transferred (see previous errors) (code 23) at main.c(1338) [sender=3.2.7]",
+   "expect": null
+  },
+  {
+   "text": "tar: Exiting with failure status due to previous errors",
+   "expect": null
+  },
+  {
+   "text": "bash: ulimit: open files: cannot modify limit: Operation not permitted",
+   "expect": null
+  }
+ ],
+ "offTopic": [
+  "INFO:__main__:Connecting to production database...\npymysql.err.OperationalError: (1045, \"Access denied for user 'admin'@'localhost'\")\nERROR:__main__:CRITICAL: Database operation failed",
+  "ERROR 1045 (28000): Access denied for user 'app'@'10.0.3.12' (using password: YES)",
+  "ERROR 2003 (HY000): Can't connect to MySQL server on 'db.example.internal:3306' (111)",
+  "ERROR 1049 (42000): Unknown database 'shop'",
+  "psql: error: connection to server at \"db.example.internal\" (10.0.0.5), port 5432 failed: Connection refused\n\tIs the server running on that host and accepting TCP/IP connections?",
+  "psql: error: connection to server on socket \"/var/run/postgresql/.s.PGSQL.5432\" failed: FATAL:  password authentication failed for user \"app\"",
+  "ERROR:  permission denied for table orders",
+  "error: externally-managed-environment\n\n× This environment is externally managed",
+  "An error occurred (AccessDenied) when calling the GetObject operation: Access Denied",
+  "Error from server (Forbidden): pods is forbidden: User \"system:serviceaccount:ci:deployer\" cannot list resource \"pods\" in API group \"\" in the namespace \"shop\"",
+  "docker: Got permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Post \"http://%2Fvar%2Frun%2Fdocker.sock/v1.24/containers/create\": dial unix /var/run/docker.sock: connect: permission denied.",
+  "Traceback (most recent call last):\n  File \"/srv/app/main.py\", line 12, in <module>\n    open('/var/log/app/app.log', 'a')\nPermissionError: [Errno 13] Permission denied: '/var/log/app/app.log'",
+  "FileNotFoundError: [Errno 2] No such file or directory: 'config.yaml'",
+  "Failed to start nginx.service: Access denied\nSee system logs and 'systemctl status nginx.service' for details.",
+  "The connection to the server localhost:8080 was refused - did you specify the right host or port?",
+  "│ Error: Inconsistent dependency lock file\n│ The following dependency selections recorded in the lock file are inconsistent with the current configuration:",
+  "requests.exceptions.ConnectTimeout: HTTPSConnectionPool(host='api.example.internal', port=443): Max retries exceeded with url: /v1/health (Caused by ConnectTimeoutError(<urllib3.connection.HTTPSConnection object at 0x7f>, 'Connection to api.example.internal timed out. (connect timeout=5)'))",
+  "Error response from daemon: manifest for example/app:1.4 not found: manifest unknown: manifest unknown",
+  "npm ERR! code E404\nnpm ERR! 404 Not Found - GET https://registry.npmjs.org/@example%2fmissing - Not found",
+  "fatal: Authentication failed for 'https://git.example.internal/app.git/'",
+  "Warning  Failed     12s   kubelet  Failed to pull image \"registry.example.internal/app:2.1\": not found\nWarning  Failed     12s   kubelet  Error: ImagePullBackOff",
+  "ModuleNotFoundError: No module named 'requests'",
+  "java.net.SocketTimeoutException: Read timed out",
+  "E: Unable to locate package nginx-full",
+  "Error: Kubernetes cluster unreachable: Get \"https://10.0.0.1:6443/version\": dial tcp 10.0.0.1:6443: i/o timeout",
+  "client_loop: send disconnect: Broken pipe",
+  "Error: error configuring S3 Backend: no valid credential sources for S3 Backend found.",
+  "Error: open /var/run/secrets/kubernetes.io/serviceaccount/token: permission denied",
+  "redis.exceptions.ConnectionError: Error 111 connecting to localhost:6379. Connection refused."
+ ]
+}

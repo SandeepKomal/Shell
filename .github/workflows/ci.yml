@@ -30,6 +30,8 @@ jobs:
         run: for f in site/*.js tools/*.js tests/*.js; do node --check "$f"; done
       - name: Content, links, cheat sheet Try rows and problems.html
         run: node tests/check_site_data.js
+      - name: The error search opens only answers it can stand behind
+        run: node tests/check_search.js
       - name: Playground scenarios start broken, wrong moves fail, fixes work
         run: node tests/check_playground.js
       - name: The playground's bash matches real bash

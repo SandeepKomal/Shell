@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
-  <meta name="description" content="Every common bash error explained: what it means, why it happens, how to confirm it, how to fix it and how to prevent it. 65 entries, from command not found to unbound variable.">
+  <meta name="description" content="Every common bash error explained: what it means, why it happens, how to confirm it, how to fix it and how to prevent it. 78 entries, from command not found to unbound variable.">
   <meta property="og:type" content="article">
   <meta property="og:title" content="Bash errors, explained">
-  <meta property="og:description" content="Symptom, cause, confirm, fix and prevent for 65 common bash errors.">
+  <meta property="og:description" content="Symptom, cause, confirm, fix and prevent for 78 common bash errors.">
   <meta property="og:url" content="https://sandeepkomal.github.io/Shell/problems.html">
   <link rel="canonical" href="https://sandeepkomal.github.io/Shell/problems.html">
   <title>Bash errors explained</title>
@@ -24,20 +24,20 @@
     <h1 class="big-title">Bash errors, explained</h1>
     <p class="lede">What each error means, why it happens, the commands that confirm the cause, the fix and how to prevent it. Then learn it for good: break and fix each one yourself in the <a href="index.html#pg-title">browser playground</a>, or search them in <a href="index.html#doctor">Troubleshoot</a>.</p>
     <ul class="note">
-      <li>Running scripts: <a href="#command-not-found">command not found</a>, <a href="#permission-denied">Permission denied</a>, <a href="#no-such-file">No such file or directory</a>, <a href="#required-file-not-found">cannot execute: required file not found</a>, <a href="#carriage-return">$'\r': command not found</a>, <a href="#dash-not-found">[[: not found</a>, <a href="#argument-list-too-long">Argument list too long</a></li>
-      <li>Syntax: <a href="#syntax-error-token">syntax error near unexpected token</a>, <a href="#unexpected-end-of-file">syntax error: unexpected end of file</a>, <a href="#unexpected-eof-matching">unexpected EOF while looking for matching</a></li>
-      <li>Variables: <a href="#unbound-variable">unbound variable</a>, <a href="#parameter-null">parameter null or not set</a>, <a href="#bad-substitution">bad substitution</a>, <a href="#readonly-variable">readonly variable</a>, <a href="#not-valid-identifier">not a valid identifier</a>, <a href="#ifs-changed">Words no longer split after changing IFS</a></li>
-      <li>Tests: <a href="#unary-operator-expected">unary operator expected</a>, <a href="#binary-operator-expected">binary operator expected</a>, <a href="#too-many-arguments">too many arguments</a>, <a href="#integer-expression-expected">integer expression expected</a></li>
+      <li>Running scripts: <a href="#command-not-found">command not found</a>, <a href="#permission-denied">Permission denied</a>, <a href="#no-such-file">No such file or directory</a>, <a href="#required-file-not-found">cannot execute: required file not found</a>, <a href="#carriage-return">$'\r': command not found</a>, <a href="#dash-not-found">[[: not found</a>, <a href="#argument-list-too-long">Argument list too long</a>, <a href="#exec-format-error">cannot execute binary file: Exec format error</a>, <a href="#old-bash-macos">declare: -A: invalid option (bash 3.2 on macOS)</a>, <a href="#no-space-left">No space left on device</a></li>
+      <li>Syntax: <a href="#syntax-error-token">syntax error near unexpected token</a>, <a href="#unexpected-end-of-file">syntax error: unexpected end of file</a>, <a href="#unexpected-eof-matching">unexpected EOF while looking for matching</a>, <a href="#event-not-found">event not found</a></li>
+      <li>Variables: <a href="#unbound-variable">unbound variable</a>, <a href="#parameter-null">parameter null or not set</a>, <a href="#bad-substitution">bad substitution</a>, <a href="#readonly-variable">readonly variable</a>, <a href="#not-valid-identifier">not a valid identifier</a>, <a href="#ifs-changed">Words no longer split after changing IFS</a>, <a href="#bad-array-subscript">bad array subscript</a></li>
+      <li>Tests: <a href="#unary-operator-expected">unary operator expected</a>, <a href="#binary-operator-expected">binary operator expected</a>, <a href="#too-many-arguments">too many arguments</a>, <a href="#integer-expression-expected">integer expression expected</a>, <a href="#missing-bracket">[: missing `]'</a></li>
       <li>Arithmetic: <a href="#operand-expected">syntax error: operand expected</a>, <a href="#value-too-great-for-base">value too great for base</a>, <a href="#division-by-zero">division by 0</a></li>
       <li>Redirection: <a href="#ambiguous-redirect">ambiguous redirect</a>, <a href="#here-document-eof">here-document delimited by end-of-file</a></li>
       <li>Functions: <a href="#return-numeric">return: numeric argument required</a>, <a href="#local-outside-function">local: can only be used in a function</a>, <a href="#illegal-option">illegal option</a>, <a href="#maximum-nesting">maximum function nesting level exceeded</a></li>
-      <li>Text tools: <a href="#unknown-option-to-s">sed: unknown option to `s'</a>, <a href="#find-paths-must-precede">find: paths must precede expression</a>, <a href="#cannot-stat">cp: cannot stat</a>, <a href="#date-invalid">date: invalid date</a></li>
-      <li>Jobs and signals: <a href="#background-status-lost">A failed background job did not fail the script</a>, <a href="#wait-not-child">wait: pid is not a child of this shell</a>, <a href="#terminated">Terminated</a>, <a href="#nohup-ignoring-input">nohup: ignoring input and appending output to 'nohup.out'</a>, <a href="#timeout-124">Exit status 124 from timeout</a></li>
-      <li>Exit status: <a href="#exit-status-codes">What does exit status 126, 127, 130 or 137 mean?</a>, <a href="#exits-silently">Script exits silently with set -e</a>, <a href="#set-e-did-not-stop">set -e did not stop the script</a>, <a href="#variable-empty-after-loop">A variable is empty after a loop</a>, <a href="#last-line-missing">The last line of a file is skipped</a></li>
-      <li>Cron and environment: <a href="#works-in-terminal-not-cron">Works in the terminal, fails from cron</a>, <a href="#curl-errors">curl: (22) The requested URL returned error</a></li>
+      <li>Text tools: <a href="#unknown-option-to-s">sed: unknown option to `s'</a>, <a href="#find-paths-must-precede">find: paths must precede expression</a>, <a href="#cannot-stat">cp: cannot stat</a>, <a href="#date-invalid">date: invalid date</a>, <a href="#jq-parse-error">jq: parse error: Invalid numeric literal</a>, <a href="#jq-cannot-index">jq: Cannot index array with string</a></li>
+      <li>Jobs and signals: <a href="#background-status-lost">A failed background job did not fail the script</a>, <a href="#wait-not-child">wait: pid is not a child of this shell</a>, <a href="#terminated">Terminated</a>, <a href="#nohup-ignoring-input">nohup: ignoring input and appending output to 'nohup.out'</a>, <a href="#timeout-124">Exit status 124 from timeout</a>, <a href="#fork-unavailable">fork: retry: Resource temporarily unavailable</a></li>
+      <li>Exit status: <a href="#exit-status-codes">What does exit status 126, 127, 130 or 137 mean?</a>, <a href="#exits-silently">Script exits silently with set -e</a>, <a href="#set-e-did-not-stop">set -e did not stop the script</a>, <a href="#variable-empty-after-loop">A variable is empty after a loop</a>, <a href="#last-line-missing">The last line of a file is skipped</a>, <a href="#broken-pipe">write error: Broken pipe (exit status 141)</a></li>
+      <li>Cron and environment: <a href="#works-in-terminal-not-cron">Works in the terminal, fails from cron</a>, <a href="#curl-errors">curl: (22) The requested URL returned error</a>, <a href="#sudo-needs-terminal">sudo: a terminal is required to read the password</a></li>
       <li>Cloud and databases: <a href="#aws-no-credentials">Unable to locate credentials</a>, <a href="#aws-expired-token">ExpiredToken: the security token is expired</a>, <a href="#s3-sync-delete">aws s3 sync --delete removed the backups</a>, <a href="#pg-dump-version-mismatch">pg_dump: server version mismatch</a>, <a href="#pg-no-password">fe_sendauth: no password supplied</a>, <a href="#mysqldump-process-privilege">mysqldump needs the PROCESS privilege</a>, <a href="#mysql-password-cli">Using a password on the command line interface can be insecure</a></li>
       <li>Kubernetes: <a href="#k8s-progress-deadline">deployment exceeded its progress deadline</a>, <a href="#k8s-drain-pdb">Cannot evict pod: it would violate the disruption budget</a>, <a href="#k8s-drain-local-storage">cannot delete Pods with local storage</a>, <a href="#k8s-drain-no-controller">cannot delete Pods declare no controller</a></li>
-      <li>Fleet and drift: <a href="#ssh-host-key-verification">Host key verification failed</a>, <a href="#ssh-publickey-denied">Permission denied (publickey)</a>, <a href="#nginx-emerg">nginx: [emerg] ... configuration file test failed</a>, <a href="#terraform-exit-2">terraform plan -detailed-exitcode exits 2</a>, <a href="#terraform-state-lock">Error acquiring the state lock</a></li>
+      <li>Fleet and drift: <a href="#ssh-host-key-verification">Host key verification failed</a>, <a href="#ssh-publickey-denied">Permission denied (publickey)</a>, <a href="#ssh-connect-failed">ssh: connect to host port 22: Connection refused</a>, <a href="#ssh-key-too-open">UNPROTECTED PRIVATE KEY FILE: permissions are too open</a>, <a href="#nginx-emerg">nginx: [emerg] ... configuration file test failed</a>, <a href="#terraform-exit-2">terraform plan -detailed-exitcode exits 2</a>, <a href="#terraform-state-lock">Error acquiring the state lock</a></li>
       <li>Personal data: <a href="#personal-data-in-logs">Personal data found in application logs</a>, <a href="#test-data-from-production">Production personal data in a test environment</a>, <a href="#unencrypted-backups">Database backups readable by anyone on the host</a>, <a href="#no-retention-limit">Personal data kept with no retention limit</a></li>
     </ul>
     <h2 class="stage-h">Running scripts</h2>
@@ -192,6 +192,73 @@ getconf ARG_MAX</code></pre>
       <p>Use find for bulk operations on directories that grow.</p>
       <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 16 · Performance and maintainability</a>. <a href="index.html#fix/argument-list-too-long">Open in Troubleshoot</a></p>
     </section>
+    <section class="card problem" id="exec-format-error">
+      <h3>cannot execute binary file: Exec format error</h3>
+      <pre class="err-line"><code>bash: ./node_exporter: cannot execute binary file: Exec format error</code></pre>
+      <h4>Symptom</h4>
+      <p>A downloaded program fails at once with exit status 126, or a container stops at start with <code>exec /usr/local/bin/entrypoint.sh: exec format error</code> in its log.</p>
+      <h4>Why it happens</h4>
+      <p>The kernel could not run the file: it is a program built for another CPU architecture, not a program at all, or a script without a <code>#!</code> line started by something other than a shell.</p>
+      <ul>
+        <li>An amd64 binary on an arm64 host, or the reverse, such as an image built on an Apple silicon Mac and run on an x86 server</li>
+        <li>The download saved an HTML error page or an archive instead of the program</li>
+        <li>A container entrypoint script with no <code>#!</code> line, or a blank line or byte-order mark before it</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>file &lt;program&gt;
+uname -m
+head -c 64 &lt;program&gt; | od -c | head -3</code></pre>
+      <h4>Fix</h4>
+      <p>Use the build for this machine's architecture (<code>uname -m</code> prints x86_64 or aarch64), or build images for the target with <code>docker buildx build --platform linux/amd64</code>. For scripts, make <code>#!/usr/bin/env bash</code> the very first line.</p>
+      <h4>Prevent</h4>
+      <p>Pick release files by <code>uname -m</code> in install scripts, check downloads against their published checksum, and build images for every platform you run.</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 12 · Cron and the environment</a>. <a href="index.html#fix/exec-format-error">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="old-bash-macos">
+      <h3>declare: -A: invalid option (bash 3.2 on macOS)</h3>
+      <pre class="err-line"><code>./sync.sh: line 3: declare: -A: invalid option</code></pre>
+      <h4>Symptom</h4>
+      <p>A script that works on Linux fails on a Mac: <code>declare -A</code> is an invalid option, <code>mapfile</code> is not found, and <code>${name,,}</code> is a bad substitution.</p>
+      <h4>Why it happens</h4>
+      <p>macOS ships bash 3.2 as /bin/bash. Associative arrays, <code>mapfile</code>, case conversion and other features arrived in bash 4.</p>
+      <ul>
+        <li><code>#!/bin/bash</code> runs the system bash 3.2 even when a newer bash is installed</li>
+        <li>A newer bash from Homebrew is in <code>$PATH</code>, but the script is run as <code>bash script.sh</code> from a shell where it is not</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>bash --version | head -1
+head -1 &lt;script&gt;
+type -a bash</code></pre>
+      <h4>Fix</h4>
+      <p>Install a current bash (<code>brew install bash</code>) and start the script with <code>#!/usr/bin/env bash</code>, or keep to bash 3.2 features when it must run on a stock Mac.</p>
+      <h4>Prevent</h4>
+      <p>Scripts that need bash 4 can say so at the top: <code>((BASH_VERSINFO[0] &gt;= 4)) || { echo 'needs bash 4 or newer' &gt;&amp;2; exit 1; }</code>.</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 12 · Cron and the environment</a>. <a href="index.html#fix/old-bash-macos">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="no-space-left">
+      <h3>No space left on device</h3>
+      <pre class="err-line"><code>cp: error writing '/var/backups/db.sql': No space left on device</code></pre>
+      <h4>Symptom</h4>
+      <p>Writes fail part way: a backup or log stops growing, <code>cp</code> or <code>tar</code> exits non-zero, and even small scripts fail with <code>cannot create temp file for here-document</code>.</p>
+      <h4>Why it happens</h4>
+      <p>The file system has no free blocks, or no free inodes, for the write. Bash writes here-documents to a temporary file, so they fail too.</p>
+      <ul>
+        <li>Logs or old backups filled the disk</li>
+        <li>A deleted file is still open in a running process, so its space is not freed</li>
+        <li>Millions of small files used up the inodes while <code>df -h</code> still shows free space</li>
+        <li>A large write to a small /tmp</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>df -h &lt;path&gt;
+df -i &lt;path&gt;
+du -xh --max-depth=1 &lt;path&gt; | sort -h | tail
+lsof +L1</code></pre>
+      <h4>Fix</h4>
+      <p>Free space where it is used: rotate or compress logs and remove old backups. Restart a process that holds a deleted file open (scripts/deleted_open_files.sh lists them). For inodes, find the directory with the many small files and clean it up.</p>
+      <h4>Prevent</h4>
+      <p>Alert on disk and inode use well before 100%, rotate logs, and keep a fixed number of backups (<code>scripts/backup_rotate.sh -k</code>).</p>
+      <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/logrotate">Log cleanup deletes the wrong files</a>, then take <a href="index.html#path">Level 13 · Safe file operations</a>. <a href="index.html#fix/no-space-left">Open in Troubleshoot</a></p>
+    </section>
     <h2 class="stage-h">Syntax</h2>
     <section class="card problem" id="syntax-error-token">
       <h3>syntax error near unexpected token</h3>
@@ -256,6 +323,25 @@ grep -n &quot;'&quot; &lt;script&gt;</code></pre>
       <h4>Prevent</h4>
       <p>An editor with syntax highlighting shows the unclosed string at once.</p>
       <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 01 · Variables and quoting</a>. <a href="index.html#fix/unexpected-eof-matching">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="event-not-found">
+      <h3>event not found</h3>
+      <pre class="err-line"><code>-bash: !word: event not found</code></pre>
+      <h4>Symptom</h4>
+      <p>A command typed in the terminal with <code>!</code> in it fails before it runs, such as <code>echo &quot;Pa55!word&quot;</code>. The same line works in a script.</p>
+      <h4>Why it happens</h4>
+      <p>In an interactive shell <code>!</code> starts history expansion, and bash found no earlier command starting with the text after it. Scripts run with history expansion off, so they never see this.</p>
+      <ul>
+        <li><code>!</code> inside double quotes in a typed command</li>
+        <li>A password or message containing <code>!</code> pasted into the terminal</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>set -o | grep histexpand</code></pre>
+      <h4>Fix</h4>
+      <p>Use single quotes (<code>'Pa55!word'</code>), escape the <code>!</code> with a backslash, or turn history expansion off for the session with <code>set +H</code>.</p>
+      <h4>Prevent</h4>
+      <p>Single-quote literal strings, and keep passwords off the command line altogether.</p>
+      <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/singlequotes">Single quotes</a>, then take <a href="index.html#path">Level 01 · Variables and quoting</a>. <a href="index.html#fix/event-not-found">Open in Troubleshoot</a></p>
     </section>
     <h2 class="stage-h">Variables</h2>
     <section class="card problem" id="unbound-variable">
@@ -378,6 +464,28 @@ ls -l /bin/sh</code></pre>
       <p>Never change IFS globally; if you must, do it in a function with <code>local IFS</code>.</p>
       <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/ifsreset">IFS changed for the whole script</a>, then take <a href="index.html#path">Level 05 · Parameter expansion</a>. <a href="index.html#fix/ifs-changed">Open in Troubleshoot</a></p>
     </section>
+    <section class="card problem" id="bad-array-subscript">
+      <h3>bad array subscript</h3>
+      <pre class="err-line"><code>./build.sh: line 6: arr: bad array subscript</code></pre>
+      <h4>Symptom</h4>
+      <p>Reading the last element of an array, or storing a value under a key, fails with this message.</p>
+      <h4>Why it happens</h4>
+      <p>The index does not point inside the array: a negative index reaches before the first element, or an associative array was given an empty key.</p>
+      <ul>
+        <li><code>${arr[-1]}</code> on an empty array, or <code>${arr[-n]}</code> with n larger than the array</li>
+        <li><code>map[$key]=value</code> with <code>key</code> empty or unset</li>
+        <li>Bash older than 4.3, which does not accept negative indexes</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>declare -p arr
+echo &quot;${#arr[@]}&quot;
+bash --version | head -1</code></pre>
+      <h4>Fix</h4>
+      <p>Check the length before indexing: <code>(( ${#arr[@]} )) &amp;&amp; last=${arr[-1]}</code>, and check that a key is not empty before using it.</p>
+      <h4>Prevent</h4>
+      <p>Use <code>set -u</code>, and test lengths and keys where the data comes from outside the script.</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 05 · Parameter expansion</a>. <a href="index.html#fix/bad-array-subscript">Open in Troubleshoot</a></p>
+    </section>
     <h2 class="stage-h">Tests</h2>
     <section class="card problem" id="unary-operator-expected">
       <h3>unary operator expected</h3>
@@ -459,6 +567,27 @@ bash -x &lt;script&gt;</code></pre>
       <h4>Prevent</h4>
       <p>Ask tools for raw numbers (<code>df -P</code>, <code>--output</code>, <code>-b</code>) rather than human-readable ones.</p>
       <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/intcompare">integer expression expected</a>, then take <a href="index.html#path">Level 03 · Conditionals and case</a>. <a href="index.html#fix/integer-expression-expected">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="missing-bracket">
+      <h3>[: missing `]'</h3>
+      <pre class="err-line"><code>./check.sh: line 8: [: missing `]'</code></pre>
+      <h4>Symptom</h4>
+      <p>A test fails with exit status 2, so the <code>if</code> takes its <code>else</code> branch every time.</p>
+      <h4>Why it happens</h4>
+      <p><code>[</code> is a command, and its last argument must be a separate <code>]</code>. Bash reached the end of the command without finding one.</p>
+      <ul>
+        <li>No space before the closing bracket: <code>[ &quot;$a&quot; = &quot;$b&quot;]</code></li>
+        <li><code>&amp;&amp;</code> or <code>||</code> inside the brackets: <code>[ -n &quot;$a&quot; &amp;&amp; -n &quot;$b&quot; ]</code> ends the <code>[</code> command at <code>&amp;&amp;</code></li>
+        <li>A <code>]</code> written as <code>)</code> or left out after a line break</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>sed -n '8p' &lt;script&gt; | cat -A
+shellcheck &lt;script&gt;</code></pre>
+      <h4>Fix</h4>
+      <p>Put spaces around every argument of <code>[</code>, including before <code>]</code>: <code>[ &quot;$a&quot; = &quot;$b&quot; ]</code>. Join tests outside the brackets, <code>[ -n &quot;$a&quot; ] &amp;&amp; [ -n &quot;$b&quot; ]</code>, or use <code>[[ -n $a &amp;&amp; -n $b ]]</code> in bash.</p>
+      <h4>Prevent</h4>
+      <p>Run ShellCheck in CI: it reports the missing space as SC1020.</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 02 · Exit codes and tests</a>. <a href="index.html#fix/missing-bracket">Open in Troubleshoot</a></p>
     </section>
     <h2 class="stage-h">Arithmetic</h2>
     <section class="card problem" id="operand-expected">
@@ -713,6 +842,49 @@ date -d &quot;$end&quot; +%s</code></pre>
       <p>Validate parsed values before arithmetic; a failed <code>$( )</code> inside <code>$(( ))</code> does not stop the script.</p>
       <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/certexpiry">date: invalid date</a>, then take <a href="index.html#path">Level 07 · grep, sed, awk and friends</a>. <a href="index.html#fix/date-invalid">Open in Troubleshoot</a></p>
     </section>
+    <section class="card problem" id="jq-parse-error">
+      <h3>jq: parse error: Invalid numeric literal</h3>
+      <pre class="err-line"><code>jq: parse error: Invalid numeric literal at line 1, column 10</code></pre>
+      <h4>Symptom</h4>
+      <p>A <code>curl | jq</code> step fails with status 2. jq 1.6 prints the same message without the <code>jq:</code> prefix.</p>
+      <h4>Why it happens</h4>
+      <p>The input is not JSON. Usually it is an HTML error page, a plain-text message or a log line, and jq stops at the first character that cannot start a JSON value.</p>
+      <ul>
+        <li>curl without <code>-f</code> received an error page (401, 404, 502) and passed it on</li>
+        <li>A proxy or login page answered instead of the API</li>
+        <li>A script printed log lines to stdout ahead of the JSON</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>curl -sS -o body.json -w '%{http_code} %{content_type}\n' &lt;url&gt;
+head -c 200 body.json</code></pre>
+      <h4>Fix</h4>
+      <p>Use <code>curl -fsS</code> so HTTP errors stop the script before jq, check the status code, and pass only the JSON body to jq.</p>
+      <h4>Prevent</h4>
+      <p>Fail on HTTP errors, send log messages to stderr, and check input with <code>jq -e . &gt;/dev/null</code> before reading values from it.</p>
+      <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/curlfail">curl says success on a 500</a>, then take <a href="index.html#path">Level 07 · grep, sed, awk and friends</a>. <a href="index.html#fix/jq-parse-error">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="jq-cannot-index">
+      <h3>jq: Cannot index array with string</h3>
+      <pre class="err-line"><code>jq: error (at &lt;stdin&gt;:3): Cannot index array with string &quot;name&quot;</code></pre>
+      <h4>Symptom</h4>
+      <p>jq stops with status 5; the same family includes <code>Cannot iterate over null</code> and <code>Cannot index string with string</code>.</p>
+      <h4>Why it happens</h4>
+      <p>The filter does not fit the shape of the data: <code>.name</code> on a list, <code>.[]</code> on a missing key (null), or a key on a plain string.</p>
+      <ul>
+        <li>The API returns a list (<code>[{...}]</code>) and the filter treats it as one object</li>
+        <li>Some records have no such key, so <code>.items[]</code> meets null</li>
+        <li>An error response with a different shape from the normal one</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>jq 'type' &lt;file&gt;
+jq 'keys' &lt;file&gt;
+jq '.[0]' &lt;file&gt;</code></pre>
+      <h4>Fix</h4>
+      <p>Match the filter to the data: <code>.[].name</code> or <code>.[0].name</code> for a list, and <code>.items[]?</code> or <code>(.items // [])[]</code> where a key may be missing.</p>
+      <h4>Prevent</h4>
+      <p>Look at the shape once with <code>jq type</code> and <code>jq keys</code>, and use <code>jq -e</code> so a missing value fails the script instead of printing <code>null</code>.</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 07 · grep, sed, awk and friends</a>. <a href="index.html#fix/jq-cannot-index">Open in Troubleshoot</a></p>
+    </section>
     <h2 class="stage-h">Jobs and signals</h2>
     <section class="card problem" id="background-status-lost">
       <h3>A failed background job did not fail the script</h3>
@@ -818,6 +990,28 @@ timeout 10 &lt;command&gt;; echo $?</code></pre>
       <p>Put a time limit on everything a cron job calls, and on the job itself.</p>
       <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/timeout">A check that hangs for an hour</a>, then take <a href="index.html#path">Level 14 · Jobs, concurrency and retries</a>. <a href="index.html#fix/timeout-124">Open in Troubleshoot</a></p>
     </section>
+    <section class="card problem" id="fork-unavailable">
+      <h3>fork: retry: Resource temporarily unavailable</h3>
+      <pre class="err-line"><code>bash: fork: retry: Resource temporarily unavailable</code></pre>
+      <h4>Symptom</h4>
+      <p>Commands fail to start, even <code>ls</code>, and a script that starts background jobs stalls or dies with this message.</p>
+      <h4>Why it happens</h4>
+      <p>Bash could not create a new process. The user has reached its process limit (<code>ulimit -u</code>, or the <code>TasksMax</code> of a systemd service), or the system is out of memory or process IDs.</p>
+      <ul>
+        <li>A loop that starts <code>&amp;</code> jobs without a limit, or a function that starts itself in the background</li>
+        <li>A low per-user process limit on a shared host</li>
+        <li>A systemd service with a small <code>TasksMax</code></li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>ulimit -u
+ps -u &quot;$USER&quot; --no-headers | wc -l
+systemctl show -p TasksMax,TasksCurrent &lt;unit&gt;</code></pre>
+      <h4>Fix</h4>
+      <p>Stop the runaway jobs (<code>pkill -u &lt;user&gt; -f &lt;script&gt;</code>), then cap concurrency: <code>xargs -P 8</code>, or count jobs and <code>wait -n</code> before starting another.</p>
+      <h4>Prevent</h4>
+      <p>Put a limit on parallelism in every script that starts background jobs.</p>
+      <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/xargsp">One at a time with xargs</a>, then take <a href="index.html#path">Level 14 · Jobs, concurrency and retries</a>. <a href="index.html#fix/fork-unavailable">Open in Troubleshoot</a></p>
+    </section>
     <h2 class="stage-h">Exit status</h2>
     <section class="card problem" id="exit-status-codes">
       <h3>What does exit status 126, 127, 130 or 137 mean?</h3>
@@ -920,6 +1114,27 @@ cat -A &lt;file&gt; | tail -1</code></pre>
       <p>Use that loop form for any file you did not write yourself.</p>
       <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/lastline">The last line is skipped</a>, then take <a href="index.html#path">Level 04 · Loops</a>. <a href="index.html#fix/last-line-missing">Open in Troubleshoot</a></p>
     </section>
+    <section class="card problem" id="broken-pipe">
+      <h3>write error: Broken pipe (exit status 141)</h3>
+      <pre class="err-line"><code>cat: write error: Broken pipe</code></pre>
+      <h4>Symptom</h4>
+      <p>With <code>set -o pipefail</code>, a pipeline such as <code>cmd | head -1</code> fails with status 141, sometimes printing <code>write error: Broken pipe</code>.</p>
+      <h4>Why it happens</h4>
+      <p>The reader at the end of the pipe exited before the writer finished. The writer was killed by SIGPIPE (signal 13), so its status is 128 + 13 = 141, and pipefail reports it. The message itself appears when SIGPIPE is ignored, for example after <code>trap '' PIPE</code>.</p>
+      <ul>
+        <li><code>head</code>, <code>grep -q</code> or <code>grep -m1</code> stop reading early, as designed</li>
+        <li>The pipeline runs under <code>set -o pipefail</code> in strict mode</li>
+        <li>The reading command crashed</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>echo &quot;${PIPESTATUS[@]}&quot;
+bash -o pipefail -c 'yes | head -1 &gt;/dev/null; echo $?'</code></pre>
+      <h4>Fix</h4>
+      <p>Where stopping early is the point, avoid the pipe (<code>grep -m1 pattern file</code>, <code>awk 'NR == 1' file</code>), or accept 141 for that one pipeline: <code>first=$(cmd | head -1) || [ $? -eq 141 ]</code>.</p>
+      <h4>Prevent</h4>
+      <p>Keep pipefail on, and handle 141 only in the pipelines that are meant to stop early.</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 10 · Strict mode and error handling</a>. <a href="index.html#fix/broken-pipe">Open in Troubleshoot</a></p>
+    </section>
     <h2 class="stage-h">Cron and environment</h2>
     <section class="card problem" id="works-in-terminal-not-cron">
       <h3>Works in the terminal, fails from cron</h3>
@@ -964,6 +1179,27 @@ getent hosts &lt;host&gt;</code></pre>
       <h4>Prevent</h4>
       <p>Always use <code>curl -fsS</code> in scripts so errors are not mistaken for content.</p>
       <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/retry">Retry with backoff</a> · <a href="index.html#play/curlfail">curl says success on a 500</a> · <a href="index.html#play/emptytest">unary operator expected</a>, then take <a href="index.html#path">Level 14 · Jobs, concurrency and retries</a>. <a href="index.html#fix/curl-errors">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="sudo-needs-terminal">
+      <h3>sudo: a terminal is required to read the password</h3>
+      <pre class="err-line"><code>sudo: a terminal is required to read the password; either use the -S option to read from standard input or configure an askpass helper</code></pre>
+      <h4>Symptom</h4>
+      <p>A script that works when you run it fails at its first <code>sudo</code> under cron, CI or <code>ssh host command</code>. With <code>sudo -n</code> the message is <code>sudo: a password is required</code>.</p>
+      <h4>Why it happens</h4>
+      <p>sudo needs a password for this command and there is no terminal to ask on.</p>
+      <ul>
+        <li>The job runs without a terminal (cron, CI, <code>ssh host cmd</code>)</li>
+        <li>The sudoers rule for this user asks for a password</li>
+        <li>The rule allows a different command or path than the one the script runs</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>sudo -n true; echo $?
+sudo -n -l</code></pre>
+      <h4>Fix</h4>
+      <p>Run the job as a user that already has the rights it needs, or allow exactly that command without a password in a drop-in edited with <code>visudo -f /etc/sudoers.d/deploy</code>: <code>deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart app</code>. Use <code>sudo -n</code> in scripts so they fail at once instead of waiting.</p>
+      <h4>Prevent</h4>
+      <p>Never feed a password to <code>sudo -S</code> from a script or a file. Give automation narrow rules for the exact commands, and test the job with <code>sudo -n</code>.</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 15 · Security</a>. <a href="index.html#fix/sudo-needs-terminal">Open in Troubleshoot</a></p>
     </section>
     <h2 class="stage-h">Cloud and databases</h2>
     <section class="card problem" id="aws-no-credentials">
@@ -1242,6 +1478,50 @@ ssh-add -l</code></pre>
       <h4>Prevent</h4>
       <p>Use one deploy identity managed by configuration management, and test new hosts in the inventory before they join the fleet.</p>
       <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 21 · Fleet operations and drift</a>. <a href="index.html#fix/ssh-publickey-denied">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="ssh-connect-failed">
+      <h3>ssh: connect to host port 22: Connection refused</h3>
+      <pre class="err-line"><code>ssh: connect to host 10.0.2.7 port 22: Connection refused</code></pre>
+      <h4>Symptom</h4>
+      <p>A run over many hosts fails on one host at once (refused), after a long wait (timed out), or on a name (could not resolve hostname).</p>
+      <h4>Why it happens</h4>
+      <p>Refused: the host answered, but nothing listens on that port. Timed out: nothing answered, usually a firewall or a host that is down.</p>
+      <ul>
+        <li>sshd is stopped or listens on another port</li>
+        <li>A firewall or security group drops port 22 from where you are</li>
+        <li>The host is down, or its name points at an old address</li>
+        <li>Connecting to a private address from outside the network</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>nc -vz -w 5 &lt;host&gt; 22
+getent hosts &lt;host&gt;
+ssh -v -o ConnectTimeout=5 &lt;user&gt;@&lt;host&gt; true</code></pre>
+      <h4>Fix</h4>
+      <p>Refused: start sshd, or connect to the right port with <code>-p</code>. Timed out: allow port 22 from your address, or go through the bastion. Check that the name resolves to the host you mean.</p>
+      <h4>Prevent</h4>
+      <p>Use <code>-o ConnectTimeout=10 -o BatchMode=yes</code> in loops so one host cannot stall the run, and report unreachable hosts apart from failed commands.</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 21 · Fleet operations and drift</a>. <a href="index.html#fix/ssh-connect-failed">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="ssh-key-too-open">
+      <h3>UNPROTECTED PRIVATE KEY FILE: permissions are too open</h3>
+      <pre class="err-line"><code>Permissions 0644 for '/home/deploy/.ssh/id_ed25519' are too open.</code></pre>
+      <h4>Symptom</h4>
+      <p>ssh prints a warning box, ignores the key, and then fails with <code>Permission denied (publickey)</code>.</p>
+      <h4>Why it happens</h4>
+      <p>ssh refuses to use a private key that other users can read.</p>
+      <ul>
+        <li>The key was copied or unpacked with default permissions (0644)</li>
+        <li>A CI job wrote the key from a secret without setting its mode</li>
+        <li>The key is on a mounted drive that does not keep Unix permissions, such as a Windows drive under WSL</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>ls -l ~/.ssh/
+stat -c '%a %U' &lt;key&gt;</code></pre>
+      <h4>Fix</h4>
+      <p><code>chmod 600 &lt;key&gt;</code> and <code>chmod 700 ~/.ssh</code>, owned by the user who runs ssh. Copy keys off drives that cannot keep the mode.</p>
+      <h4>Prevent</h4>
+      <p>Create key files with <code>umask 077</code> or <code>install -m 600</code>, and keep them out of shared folders.</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 21 · Fleet operations and drift</a>. <a href="index.html#fix/ssh-key-too-open">Open in Troubleshoot</a></p>
     </section>
     <section class="card problem" id="nginx-emerg">
       <h3>nginx: [emerg] ... configuration file test failed</h3>
