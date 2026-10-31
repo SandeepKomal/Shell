@@ -92,6 +92,13 @@ button { font: inherit; }
 .top nav a { color: var(--text); opacity: .75; padding: 6px 12px; border-radius: 99px; white-space: nowrap; font-size: .82rem; transition: opacity .2s, background .2s; }
 .top nav a:hover { opacity: 1; text-decoration: none; }
 .top nav a[aria-current="page"] { opacity: 1; background: var(--code-bg); font-weight: 500; }
+/* Two modes: Learn (the course) and Fix (the reference for something broken now). */
+.top nav { align-items: center; gap: 10px; }
+.mode { display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 99px; }
+.mode-k { font-size: .7rem; font-weight: 600; padding: 0 6px 0 10px; color: var(--accent); }
+.mode.fix { background: var(--warn-soft); }
+.mode.fix .mode-k { color: var(--warn-text); }
+.mode.fix a[aria-current="page"] { background: var(--surface); }
 .gh { display: inline-flex; align-items: center; font-size: .8rem; font-weight: 500; color: var(--on-accent); background: var(--accent); border-radius: 99px; padding: 6px 14px; }
 .gh:hover { background: var(--accent-hover); text-decoration: none; }
 .kbd-btn { display: inline-flex; align-items: center; gap: 10px; font-size: .8rem; color: var(--muted); background: var(--code-bg); border: 1px solid transparent; border-radius: 99px; padding: 5px 6px 5px 14px; cursor: pointer; }
@@ -110,6 +117,21 @@ main { padding-bottom: 64px; min-height: 70vh; }
 .ctas { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; }
 .text-link { font-size: 1.05rem; }
 .text-link::after { content: " ›"; }
+/* The doors sit in a full-width row under the headline and the stage. */
+.hero-grid > .doors { grid-column: 1 / -1; grid-row: 2; }
+.doors { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; }
+.door { padding: 24px 26px; border-radius: var(--radius); border: 1px solid var(--hair); background: var(--surface); display: flex; flex-direction: column; gap: 6px; }
+.door h2 { margin: 0; font-size: 1.35rem; letter-spacing: -.02em; }
+.door p { margin: 0; color: var(--muted); }
+.door .door-k { font-size: .85rem; font-weight: 600; color: var(--accent); }
+.door.fix { background: var(--warn-soft); border-color: transparent; }
+.door.fix .door-k { color: var(--warn-text); }
+.door .ctas { margin-top: 10px; }
+.door-search { display: flex; gap: 8px; margin-top: 10px; }
+.door-search input { flex: 1; min-width: 0; border-radius: 99px; }
+.mode-banner { margin: 32px 0 0; padding: 12px 16px; border-radius: var(--radius-sm); background: var(--warn-soft); font-size: .95rem; }
+.mode-banner + h2 { margin-top: 32px; }
+.mode-banner strong { color: var(--warn-text); }
 .pill {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 22px;
   border-radius: 99px; font-size: 1rem; color: var(--accent); background: transparent; border: 1px solid var(--accent);
@@ -282,6 +304,10 @@ select:focus, input[type="search"]:focus { border-color: var(--accent); outline:
 .problem-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .err-line { color: var(--bad); background: var(--bad-soft); font-size: .85rem; }
 .practise { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 18px; }
+.learn-it { margin-top: 24px; padding: 18px 20px; border-radius: var(--radius-sm); background: var(--accent-soft); border: 1px solid var(--hair); }
+.problem .learn-it h4 { margin-top: 0; color: var(--text); }
+.learn-it > .practise { margin-top: 12px; }
+.learn-it > .note { margin: 12px 0 0; }
 
 /* Cheat sheet */
 .group { font-size: 1rem; color: var(--muted); margin: 28px 0 10px; font-weight: 600; }
@@ -437,6 +463,7 @@ select:focus, input[type="search"]:focus { border-color: var(--accent); outline:
 
 @media (max-width: 960px) {
   .hero-grid { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+  .hero-grid > .doors { grid-row: auto; }
   .pg-body { grid-template-columns: minmax(0, 1fr); }
   .start-grid { grid-template-columns: minmax(0, 1fr); }
   .stages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -451,7 +478,11 @@ select:focus, input[type="search"]:focus { border-color: var(--accent); outline:
   .brand { flex: 1; }
   .kbd-btn span { display: none; }
   .kbd-btn { padding: 5px; }
-  .top nav { order: 3; flex-basis: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+  .top nav { order: 3; flex-basis: 100%; flex-wrap: wrap; gap: 6px; }
+  .mode { flex-wrap: wrap; justify-content: center; }
+  .mode-k { padding: 0 4px 0 8px; }
+  .doors { grid-template-columns: 1fr; }
+  .door-search { flex-direction: column; }
   .top nav a { padding: 6px 4px; text-align: center; }
   .hero { padding-top: 44px; }
   .stage { padding: 20px; border-radius: 24px; min-height: 0; }

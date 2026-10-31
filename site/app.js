@@ -114,11 +114,11 @@
     const tiles = [
       ["#xray", "Script X-ray", "Every risky line, flagged.", `${rules} checks: unquoted variables, swallowed errors, cd without a check, rm -rf with an empty variable.`, "wide"],
       ["#pg-title", "Playground", "Run it, break it, fix it.", "A bash shell over a small server, with real error messages and real incidents.", "wide"],
-      ["#doctor", "Troubleshoot", "Paste the error.", "Cause, confirm, fix, prevent."],
       ["#quiz", "Quiz", "Read code like a reviewer.", "Predict what bash does."],
       ["#arch", "How bash runs", "How a line runs.", "Tokens, expansions, fork and exec."],
-      ["#cheats", "Cheat sheet", "Copy, fill, run.", "The idioms scripts use every day, each one runnable.", "wide"],
-      [Q.repo + "/tree/main/scripts", "Scripts", "Tested tools, ready to use.", "Retries, backups, deploys, audits: the repository's scripts, each used in a level.", "wide"]
+      ["#cheats", "Cheat sheet", "Copy, fill, run.", "The idioms scripts use every day, each one runnable."],
+      [Q.repo + "/tree/main/scripts", "Scripts", "Tested tools, ready to use.", "Retries, backups, deploys, audits: the repository's scripts, each used in a level.", "wide"],
+      ["#doctor", "Stuck on an error?", "Learn why it happens, then practise the fix.", "Paste the error: cause, confirm, fix, prevent.", "wide"]
     ];
     $("#bento").replaceChildren(...tiles.map(([href, k, title, text, size]) => h("a.tile" + (size ? "." + size : ""), { href }, h("div", null, h("div.k", null, k), h("h3", null, title)), h("p", null, text))));
   }
@@ -327,16 +327,20 @@
     document.querySelectorAll("#doctor-list button").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.index) === index)));
     const lv = Q.levels.find((l) => l.id === d.level);
     const section = (title, ...kids) => [h("h4", null, title), ...kids];
+    const practice = practiseRow(d.scenarios, "Practise:");
     $("#doctor-out").replaceChildren(h("article.card.problem", { id: "fix-" + d.id },
       h("div.problem-head", null, h("div", null, h("h3", null, d.title), h("p.muted.small", null, d.group)), copyButton(pageUrl("fix/" + d.id), "Copy link", "Link copied")),
       ...section("Error", h("pre.err-line", null, h("code", null, d.error))),
       ...section("Symptom", h("p", null, ...rich(d.symptom))),
-      ...section("Cause", h("p", null, ...rich(d.meaning)), h("ul", null, d.causes.map((c) => h("li", null, ...rich(c))))),
+      ...section("Why it happens", h("p", null, ...rich(d.meaning)), h("ul", null, d.causes.map((c) => h("li", null, ...rich(c))))),
       ...section("Confirm", h("pre", null, h("code", null, d.confirm.join("\n")))),
       ...section("Fix", h("p", null, ...rich(d.fix))),
       ...section("Prevent", h("p", null, ...rich(d.prevent))),
-      practiseRow(d.scenarios, "Practise it:"),
-      lv ? h("p.note", null, "Learn more: ", h("a", { href: "#level-" + lv.id, onclick: () => { location.hash = "path"; setTimeout(() => scrollToEl(document.getElementById("level-" + lv.id)), 0); } }, `Level ${lv.id} · ${lv.title}`)) : null));
+      // Fixing is the way in; the point is to learn it, so every answer ends in practice.
+      h("div.learn-it", null,
+        ...section("Now learn it", practice ? h("p", null, "Break this yourself in a safe playground and fix it. Doing it once is what makes you recognise it next time.") : null),
+        practice,
+        lv ? h("p.note", null, practice ? "Then the level that teaches it: " : "The level that teaches it: ", h("a", { href: "#level-" + lv.id, onclick: () => { location.hash = "path"; setTimeout(() => scrollToEl(document.getElementById("level-" + lv.id)), 0); } }, `Level ${lv.id} · ${lv.title}`)) : null)));
   }
 
   // --- cheat sheet -----------------------------------------------------------------
@@ -397,7 +401,7 @@
       { label: "Your path", kind: "Section", run: () => go("path", () => scrollToEl($("#path-title"))) },
       { label: "Exam: random questions from every level", kind: "Quiz", run: () => go("quiz", () => { $("#quiz-level").value = "exam"; renderQuiz(); }) },
       { label: "Script X-ray", kind: "Section", run: () => go("xray") },
-      { label: "Troubleshoot: paste an error", kind: "Section", run: () => go("doctor", () => $("#doctor-q").focus()) },
+      { label: "Fix: troubleshoot an error", kind: "Section", run: () => go("doctor", () => $("#doctor-q").focus()) },
       { label: "Cheat sheet", kind: "Section", run: () => go("cheats", () => $("#cheat-q").focus()) },
       { label: "How bash runs a command", kind: "Section", run: () => go("arch") },
       ...Q.levels.map((lv) => ({ label: `${lv.id} · ${lv.title}`, hint: lv.topic, kind: "Level", run: () => go("path", () => { const el = document.getElementById("level-" + lv.id); el.querySelector("details").open = true; scrollToEl(el); }) })),
@@ -459,6 +463,10 @@
   buildDoctorList();
   $("#doctor-list").after(h("p.muted", { id: "doctor-none", hidden: true }, "No entry matches. Try fewer words, or one word from the error, such as unbound or operand."));
   $("#doctor-q").addEventListener("input", filterDoctor);
+  // The home page's "Something broken?" box hands the pasted error to Troubleshoot.
+  const doorGo = () => { $("#doctor-q").value = $("#door-q").value; go("doctor", () => { filterDoctor(); $("#doctor-q").focus(); }); };
+  $("#door-go").addEventListener("click", doorGo);
+  $("#door-q").addEventListener("keydown", (e) => { if (e.key === "Enter") doorGo(); });
   $("#cheat-q").addEventListener("input", renderCheats);
   $("#forget").addEventListener("click", forgetEverything);
 
