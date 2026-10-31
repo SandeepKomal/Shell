@@ -18,13 +18,14 @@ function build() {
   const sections = Q.doctorGroups.map(([group, ids]) => {
     const items = ids.map((id) => {
       const d = Q.doctor.find((x) => x.id === id);
+      const lv = Q.levels.find((l) => l.id === d.level);
       const practise = d.scenarios.filter((s) => titles[s]).map((s) => `<a href="index.html#play/${s}">${esc(titles[s])}</a>`).join(" · ");
       return `    <section class="card problem" id="${d.id}">
       <h3>${esc(d.title)}</h3>
       <pre class="err-line"><code>${esc(d.error)}</code></pre>
       <h4>Symptom</h4>
       <p>${rich(d.symptom)}</p>
-      <h4>Cause</h4>
+      <h4>Why it happens</h4>
       <p>${rich(d.meaning)}</p>
       <ul>
 ${d.causes.map((c) => `        <li>${rich(c)}</li>`).join("\n")}
@@ -35,7 +36,7 @@ ${d.causes.map((c) => `        <li>${rich(c)}</li>`).join("\n")}
       <p>${rich(d.fix)}</p>
       <h4>Prevent</h4>
       <p>${rich(d.prevent)}</p>
-      <p class="note">${practise ? `Practise it: ${practise} · ` : ""}<a href="index.html#fix/${d.id}">Open in Troubleshoot</a></p>
+      <p class="note"><strong>Now learn it:</strong> ${practise ? `break and fix it yourself in ${practise}, then take` : "take"} <a href="index.html#path">Level ${lv.id} · ${esc(lv.title)}</a>. <a href="index.html#fix/${d.id}">Open in Troubleshoot</a></p>
     </section>`;
     }).join("\n");
     return `    <h2 class="stage-h">${esc(group)}</h2>\n${items}`;
@@ -65,7 +66,7 @@ ${d.causes.map((c) => `        <li>${rich(c)}</li>`).join("\n")}
   </header>
   <main class="wrap">
     <h1 class="big-title">Bash errors, explained</h1>
-    <p class="lede">What each error means, why it happens, the commands that confirm the cause, the fix and how to prevent it. Search them, and practise the fixes, in <a href="index.html#doctor">Troubleshoot</a>.</p>
+    <p class="lede">What each error means, why it happens, the commands that confirm the cause, the fix and how to prevent it. Then learn it for good: break and fix each one yourself in the <a href="index.html#pg-title">browser playground</a>, or search them in <a href="index.html#doctor">Troubleshoot</a>.</p>
     <ul class="note">
 ${toc}
     </ul>
