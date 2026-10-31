@@ -54,13 +54,14 @@
         <li>Spaces around <code>=</code> in an assignment: <code>NAME = value</code> runs a command called NAME</li>
         <li>A script in the current directory run without <code>./</code></li>
         <li>A function defined in your terminal, which child scripts never see</li>
+        <li>Run under <code>sudo</code>, which replaces your PATH with its <code>secure_path</code> (<code>sudo: &lt;name&gt;: command not found</code>)</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>type -a &lt;name&gt;
+      <pre><code>type -a &lt;name&gt;            # prints nothing: no function, builtin or program by that name in PATH
 echo &quot;$PATH&quot;
-command -v &lt;name&gt; || echo missing</code></pre>
+sudo printenv PATH        # the PATH sudo really uses</code></pre>
       <h4>Fix</h4>
-      <p>Correct the name, install the program, call it by its full path, or set PATH at the top of the script. For assignments, remove the spaces: <code>NAME=value</code>.</p>
+      <p>Correct the name, install the program, call it by its full path, or set PATH at the top of the script. For assignments, remove the spaces: <code>NAME=value</code>. Under sudo, call the program by its full path rather than widening <code>secure_path</code>.</p>
       <h4>Prevent</h4>
       <p>Set PATH explicitly in scripts that run from cron or CI, and check required tools up front with <code>command -v</code>.</p>
       <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/typo">command not found</a> · <a href="index.html#play/assign">Spaces around =</a> · <a href="index.html#play/cronpath">Works in the terminal, not in cron</a>, then take <a href="index.html#path">Level 00 · Your first script</a>. <a href="index.html#fix/command-not-found">Open in Troubleshoot</a></p>
@@ -74,14 +75,14 @@ command -v &lt;name&gt; || echo missing</code></pre>
       <p>The file exists but is not executable for you, or a directory on its path cannot be entered.</p>
       <ul>
         <li>The script has no execute bit (<code>-rw-r--r--</code>)</li>
-        <li>The file system is mounted <code>noexec</code>, as /tmp often is</li>
+        <li>The file system is mounted <code>noexec</code>, as /tmp is on many hardened systems</li>
         <li>A fixed file name in the shared /tmp that another user's job created first</li>
         <li>Writing to a file the shell cannot open, such as <code>sudo echo x &gt; /etc/file</code> (the redirection runs as you)</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>ls -l &lt;script&gt;
-findmnt -no OPTIONS --target &lt;script&gt;
-id</code></pre>
+      <pre><code>ls -l &lt;script&gt;                          # no x in the mode: the execute bit
+findmnt -no OPTIONS --target &lt;script&gt;   # noexec in the list: the mount
+namei -l &lt;script&gt;                       # a directory without x for you: the path</code></pre>
       <h4>Fix</h4>
       <p><code>chmod +x script.sh</code>. For <code>noexec</code> mounts run <code>bash script.sh</code> or move the script. For root-owned files use <code>echo x | sudo tee /etc/file</code>.</p>
       <h4>Prevent</h4>
@@ -123,12 +124,13 @@ printf '%q\n' &quot;&lt;path&gt;&quot;</code></pre>
         <li>The file was saved with CRLF line endings</li>
         <li>The <code>#!</code> line names an interpreter that is not installed, such as /bin/zsh</li>
         <li>A typo in the <code>#!</code> path</li>
+        <li>A program (not a script) whose dynamic loader is missing, such as a glibc build on Alpine (musl)</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>head -1 &lt;script&gt; | cat -A
-file &lt;script&gt;</code></pre>
+      <pre><code>head -1 &lt;script&gt; | cat -A   # ^M$ at the end: CRLF
+file &lt;program&gt;               # 'interpreter /lib64/ld-linux-x86-64.so.2': that loader must exist</code></pre>
       <h4>Fix</h4>
-      <p>Convert the line endings: <code>sed -i 's/\r$//' script.sh</code> or <code>dos2unix script.sh</code>.</p>
+      <p>Convert the line endings: <code>sed -i 's/\r$//' script.sh</code> or <code>dos2unix script.sh</code>. Install or point <code>#!</code> at the real interpreter. For a program, use the build for this system's C library (a musl or static build on Alpine).</p>
       <h4>Prevent</h4>
       <p>Add <code>*.sh text eol=lf</code> to <code>.gitattributes</code> and set your editor to LF for scripts.</p>
       <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/crlf">cannot execute: required file not found</a>, then take <a href="index.html#path">Level 12 · Cron and the environment</a>. <a href="index.html#fix/required-file-not-found">Open in Troubleshoot</a></p>
@@ -182,10 +184,13 @@ ls -l /bin/sh</code></pre>
       <p>The glob expanded to more text than the kernel allows for one program's arguments.</p>
       <ul>
         <li>Tens of thousands of matching files</li>
+        <li>A very large environment, which counts against the same limit</li>
+        <li>One argument longer than 128 KiB on Linux (<code>MAX_ARG_STRLEN</code>), such as a whole file passed with <code>&quot;$(cat file)&quot;</code></li>
       </ul>
       <h4>Confirm</h4>
       <pre><code>ls | wc -l
-getconf ARG_MAX</code></pre>
+getconf ARG_MAX
+env | wc -c   # size of the environment, without printing it</code></pre>
       <h4>Fix</h4>
       <p>Let find do it: <code>find . -name '*.log' -delete</code>, or <code>find . -name '*.log' -print0 | xargs -0 rm --</code>.</p>
       <h4>Prevent</h4>
@@ -247,12 +252,13 @@ type -a bash</code></pre>
         <li>A deleted file is still open in a running process, so its space is not freed</li>
         <li>Millions of small files used up the inodes while <code>df -h</code> still shows free space</li>
         <li>A large write to a small /tmp</li>
+        <li>On ext4, the blocks reserved for root (5% by default): Avail is 0 for other users while Used is below Size</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>df -h &lt;path&gt;
-df -i &lt;path&gt;
-du -xh --max-depth=1 &lt;path&gt; | sort -h | tail
-lsof +L1</code></pre>
+      <pre><code>df -h &lt;path&gt;   # Use% 100, or Avail 0 below Size: the reserved blocks
+df -i &lt;path&gt;   # IUse% 100: inodes, not bytes
+du -xh --max-depth=1 &lt;path&gt; | sort -h | tail   # where the space went
+lsof +L1   # deleted files still open: df counts them, du does not</code></pre>
       <h4>Fix</h4>
       <p>Free space where it is used: rotate or compress logs and remove old backups. Restart a process that holds a deleted file open (scripts/deleted_open_files.sh lists them). For inodes, find the directory with the many small files and clean it up.</p>
       <h4>Prevent</h4>
@@ -271,7 +277,7 @@ lsof +L1</code></pre>
         <li>A missing <code>then</code>, <code>do</code>, <code>;</code> or <code>;;</code></li>
         <li>A missing space: <code>if [$x = 1]</code> or <code>}</code> without a <code>;</code> before it</li>
         <li>Windows line endings (<code>$'do\r'</code>)</li>
-        <li>A function written as <code>function name() {</code> in sh</li>
+        <li>An unquoted <code>(</code> or <code>)</code> in an argument, such as <code>echo (beta)</code></li>
       </ul>
       <h4>Confirm</h4>
       <pre><code>bash -n &lt;script&gt;
@@ -356,10 +362,12 @@ grep -n &quot;'&quot; &lt;script&gt;</code></pre>
         <li>A missing argument: <code>$1</code> when the script was run with none</li>
         <li>A typo in a variable name</li>
         <li>A variable set in your login shell but not under cron or CI</li>
+        <li>An empty array expanded as <code>&quot;${arr[@]}&quot;</code> in bash older than 4.4 (macOS's 3.2)</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>declare -p &lt;NAME&gt;
-env | grep &lt;NAME&gt;</code></pre>
+      <pre><code>[[ -v NAME ]] &amp;&amp; echo set || echo unset
+printenv NAME &gt; /dev/null &amp;&amp; echo exported || echo 'not in the environment'   # set in the shell but not exported: child scripts never see it
+bash --version | head -1</code></pre>
       <h4>Fix</h4>
       <p>Give optional variables a default with <code>${NAME:-default}</code>, require others with <code>${NAME:?message}</code>, and fix typos.</p>
       <h4>Prevent</h4>
@@ -376,10 +384,11 @@ env | grep &lt;NAME&gt;</code></pre>
       <ul>
         <li>The variable was not passed in, or not exported by the parent script</li>
         <li>A missing command-line argument (<code>${1:?usage}</code>)</li>
+        <li>It is set but empty: <code>${NAME:?}</code> rejects empty values too (<code>${NAME?}</code> only rejects unset)</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>env | grep &lt;NAME&gt;
-declare -p &lt;NAME&gt;</code></pre>
+      <pre><code>[[ -v NAME ]] &amp;&amp; echo &quot;set, ${#NAME} characters&quot; || echo unset   # set, 0 characters: empty, not missing
+printenv NAME &gt; /dev/null &amp;&amp; echo exported || echo 'not in the environment'</code></pre>
       <h4>Fix</h4>
       <p>Pass the value: <code>export NAME=value</code> in the caller, or <code>NAME=value ./script.sh</code>.</p>
       <h4>Prevent</h4>
@@ -474,7 +483,7 @@ ls -l /bin/sh</code></pre>
       <ul>
         <li><code>${arr[-1]}</code> on an empty array, or <code>${arr[-n]}</code> with n larger than the array</li>
         <li><code>map[$key]=value</code> with <code>key</code> empty or unset</li>
-        <li>Bash older than 4.3, which does not accept negative indexes</li>
+        <li>Bash older than 4.2 (macOS's 3.2), which rejects negative indexes; assigning to one, such as <code>arr[-1]=x</code>, needs 4.3</li>
       </ul>
       <h4>Confirm</h4>
       <pre><code>declare -p arr
@@ -792,10 +801,11 @@ shellcheck &lt;script&gt;</code></pre>
       <h4>Why it happens</h4>
       <p>An unquoted pattern like <code>*.log</code> was expanded by the shell into several file names before find saw it.</p>
       <ul>
-        <li><code>find . -name *.log</code> run where .log files exist</li>
+        <li><code>find . -name *.log</code> run where two or more .log files exist</li>
+        <li>With exactly one match there is no error: find quietly searches for that one name and misses the rest</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>echo find . -name *.log</code></pre>
+      <pre><code>echo find . -name *.log   # shows what find really received</code></pre>
       <h4>Fix</h4>
       <p>Quote the pattern: <code>find . -name '*.log'</code>.</p>
       <h4>Prevent</h4>
@@ -846,7 +856,7 @@ date -d &quot;$end&quot; +%s</code></pre>
       <h3>jq: parse error: Invalid numeric literal</h3>
       <pre class="err-line"><code>jq: parse error: Invalid numeric literal at line 1, column 10</code></pre>
       <h4>Symptom</h4>
-      <p>A <code>curl | jq</code> step fails with status 2. jq 1.6 prints the same message without the <code>jq:</code> prefix.</p>
+      <p>A <code>curl | jq</code> step fails with status 5 (jq 1.7) or 2 (jq 1.6). jq 1.6 prints the same message without the <code>jq:</code> prefix.</p>
       <h4>Why it happens</h4>
       <p>The input is not JSON. Usually it is an HTML error page, a plain-text message or a log line, and jq stops at the first character that cannot start a JSON value.</p>
       <ul>
@@ -917,7 +927,7 @@ jobs -l</code></pre>
       <ul>
         <li>The job was started inside <code>( )</code>, a pipeline or <code>$( )</code>, so a subshell owns it</li>
         <li>The PID came from a file or from <code>pgrep</code></li>
-        <li>The job was already waited for</li>
+        <li>The job was started by another script, even one this script called</li>
       </ul>
       <h4>Confirm</h4>
       <pre><code>jobs -l
@@ -978,11 +988,13 @@ echo $?</code></pre>
       <p>The command took longer than its limit. <code>timeout</code> sent it TERM and returned 124; <code>curl -m</code> gave up with 28. Without a limit, network calls can wait for a very long time.</p>
       <ul>
         <li>A server that accepts connections and never answers</li>
+        <li>A firewall or security group that drops the packets, so the connection never opens</li>
         <li>A limit shorter than the work needs</li>
         <li>No limit at all, so the job hangs</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>time &lt;command&gt;
+      <pre><code>curl -v --connect-timeout 5 -m 10 -o /dev/null &lt;url&gt;   # stuck at 'Trying': nothing answers (firewall); 'Connected' then silence: the server is slow
+time &lt;command&gt;
 timeout 10 &lt;command&gt;; echo $?</code></pre>
       <h4>Fix</h4>
       <p>Give every network call a limit (<code>timeout 10 cmd</code> or <code>curl -m 10</code>) and treat 124 as a failure: <code>|| { echo 'timed out' &gt;&amp;2; exit 1; }</code>.</p>
@@ -999,13 +1011,15 @@ timeout 10 &lt;command&gt;; echo $?</code></pre>
       <p>Bash could not create a new process. The user has reached its process limit (<code>ulimit -u</code>, or the <code>TasksMax</code> of a systemd service), or the system is out of memory or process IDs.</p>
       <ul>
         <li>A loop that starts <code>&amp;</code> jobs without a limit, or a function that starts itself in the background</li>
-        <li>A low per-user process limit on a shared host</li>
+        <li>A low per-user process limit on a shared host; it counts threads, so one Java or Node service can use most of it</li>
         <li>A systemd service with a small <code>TasksMax</code></li>
+        <li>A container's pids limit (<code>--pids-limit</code>, or the cgroup <code>pids.max</code>)</li>
       </ul>
       <h4>Confirm</h4>
       <pre><code>ulimit -u
-ps -u &quot;$USER&quot; --no-headers | wc -l
-systemctl show -p TasksMax,TasksCurrent &lt;unit&gt;</code></pre>
+ps -L -u &quot;$USER&quot; --no-headers | wc -l   # threads, which is what the limit counts; near ulimit -u: the user limit
+systemctl show -p TasksMax,TasksCurrent &lt;unit&gt;   # TasksCurrent near TasksMax: the unit's limit
+cat /sys/fs/cgroup/pids.max /sys/fs/cgroup/pids.current   # inside a container (cgroup v2)</code></pre>
       <h4>Fix</h4>
       <p>Stop the runaway jobs (<code>pkill -u &lt;user&gt; -f &lt;script&gt;</code>), then cap concurrency: <code>xargs -P 8</code>, or count jobs and <code>wait -n</code> before starting another.</p>
       <h4>Prevent</h4>
@@ -1019,7 +1033,7 @@ systemctl show -p TasksMax,TasksCurrent &lt;unit&gt;</code></pre>
       <h4>Symptom</h4>
       <p>A job failed with a number and no message.</p>
       <h4>Why it happens</h4>
-      <p>0 is success; 1 a general error; 2 misuse or a syntax error; 126 found but not executable; 127 not found; 128+n killed by signal n: 130 Ctrl+C, 137 SIGKILL (often the OOM killer), 143 SIGTERM.</p>
+      <p>0 is success; 1 a general error; 2 misuse or a syntax error; 126 found but not executable; 127 not found; 128+n killed by signal n: 130 Ctrl+C, 137 SIGKILL (often the OOM killer), 139 SIGSEGV (the program crashed), 143 SIGTERM.</p>
       <ul>
         <li>See the specific error entries above for 126 and 127</li>
         <li>137 in containers usually means the memory limit was hit</li>
@@ -1061,12 +1075,13 @@ trap 'echo &quot;failed at line $LINENO: $BASH_COMMAND&quot; &gt;&amp;2' ERR</co
       <h4>Symptom</h4>
       <p>A step failed, yet the script carried on and said it succeeded.</p>
       <h4>Why it happens</h4>
-      <p><code>set -e</code> ignores failures in many places: inside pipelines (except the last command), in <code>if</code> and <code>while</code> conditions, left of <code>&amp;&amp;</code> and <code>||</code>, in <code>local x=$(cmd)</code>, and after <code>cd</code> that you did not check.</p>
+      <p><code>set -e</code> ignores failures in many places: inside pipelines (except the last command), in <code>if</code> and <code>while</code> conditions, left of <code>&amp;&amp;</code> and <code>||</code>, in <code>local x=$(cmd)</code>, in a <code>$(cmd)</code> used as an argument (<code>echo &quot;$(cmd)&quot;</code>), and everywhere inside a function called from <code>if</code>, <code>&amp;&amp;</code> or <code>||</code>.</p>
       <ul>
         <li><code>cmd | gzip &gt; file</code> without pipefail</li>
         <li><code>local x=$(cmd)</code> hiding cmd's status</li>
+        <li><code>if deploy; then</code> or <code>deploy || alert</code>: set -e is off for every line inside <code>deploy</code></li>
         <li><code>$?</code> read after another command</li>
-        <li>A failed <code>cd</code> followed by more commands</li>
+        <li>A failed <code>cd</code> in a script without <code>set -e</code>, or in one of the places above (a plain failed <code>cd</code> does stop a <code>set -e</code> script)</li>
       </ul>
       <h4>Confirm</h4>
       <pre><code>echo &quot;${PIPESTATUS[@]}&quot;
@@ -1149,10 +1164,12 @@ bash -o pipefail -c 'yes | head -1 &gt;/dev/null; echo $?'</code></pre>
         <li>Relative paths</li>
         <li>No <code>#!</code> line, so sh runs it</li>
         <li><code>%</code> in the crontab line, which cron turns into a newline</li>
+        <li>The job runs as another user (root's crontab or <code>/etc/cron.d</code>), with a different HOME, keys and permissions</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>env -i HOME=$HOME PATH=/usr/bin:/bin /bin/sh -c '/path/to/script.sh'
-grep CRON /var/log/syslog | tail</code></pre>
+      <pre><code>env -i HOME=$HOME PATH=/usr/bin:/bin /bin/sh -c '/path/to/script.sh'   # fails the same way: the environment
+journalctl -u cron -u crond --since today   # or grep CRON /var/log/syslog: did it start, as which user
+crontab -l; sudo ls /etc/cron.d</code></pre>
       <h4>Fix</h4>
       <p>Set PATH in the script, load its own config by absolute path, use absolute paths, add a <code>#!</code> line, and escape <code>%</code> as <code>\%</code> in crontab.</p>
       <h4>Prevent</h4>
@@ -1165,17 +1182,21 @@ grep CRON /var/log/syslog | tail</code></pre>
       <h4>Symptom</h4>
       <p>A download or API call fails in a script; also <code>curl: (6) Could not resolve host</code> and <code>curl: (7) Failed to connect</code>.</p>
       <h4>Why it happens</h4>
-      <p>With <code>-f</code>, curl turns HTTP errors into exit status 22. 6 is DNS, 7 is a refused connection, 28 a timeout.</p>
+      <p>With <code>-f</code>, curl turns HTTP status 400 and above into exit status 22. 6 is DNS, 7 a connection refused or unreachable, 28 a timeout, 60 a TLS certificate it could not verify.</p>
       <ul>
         <li>The server is down or busy (503)</li>
+        <li>A 401 or 403: missing or wrong credentials, or a token for another environment</li>
         <li>A wrong host name, or no DNS from that machine</li>
         <li>A firewall or the service not listening</li>
+        <li>A proxy setting (<code>https_proxy</code>, <code>no_proxy</code>) present in your shell but not in the job, or the reverse</li>
+        <li>(60): a missing CA bundle, or a proxy that re-signs TLS</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>curl -sS -o /dev/null -w '%{http_code}\n' &lt;url&gt;
-getent hosts &lt;host&gt;</code></pre>
+      <pre><code>curl -sS -o /dev/null -w '%{http_code} %{remote_ip}\n' &lt;url&gt;   # the status, and the address curl really reached
+getent hosts &lt;host&gt;
+[ -n &quot;${https_proxy}${HTTPS_PROXY}&quot; ] &amp;&amp; echo 'a proxy is set'   # without printing it</code></pre>
       <h4>Fix</h4>
-      <p>Retry transient errors (5xx, 429, timeouts) with a limit and backoff; fail fast on 4xx.</p>
+      <p>Retry transient errors (5xx, 429, timeouts) with a limit and backoff; fail fast on 4xx and fix the credentials or URL. For (60), give curl the right CA bundle with <code>--cacert</code>; do not use <code>-k</code>, which accepts any server.</p>
       <h4>Prevent</h4>
       <p>Always use <code>curl -fsS</code> in scripts so errors are not mistaken for content.</p>
       <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/retry">Retry with backoff</a> · <a href="index.html#play/curlfail">curl says success on a 500</a> · <a href="index.html#play/emptytest">unary operator expected</a>, then take <a href="index.html#path">Level 14 · Jobs, concurrency and retries</a>. <a href="index.html#fix/curl-errors">Open in Troubleshoot</a></p>
@@ -1214,11 +1235,12 @@ sudo -n -l</code></pre>
         <li><code>AWS_PROFILE</code> is set in your shell but not exported to the job</li>
         <li>On EC2 the instance has no role, or the metadata service needs IMDSv2 and the hop limit is too low for a container</li>
         <li>SSO credentials expired and need <code>aws sso login</code></li>
+        <li>Run under <code>sudo</code>, which uses root's HOME and drops your <code>AWS_*</code> variables</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>aws sts get-caller-identity
-env | grep -E '^AWS_' | cut -d= -f1
-aws configure list</code></pre>
+      <pre><code>aws sts get-caller-identity   # run as the job's user: the identity it would really use
+env | grep -E '^AWS_' | cut -d= -f1   # names only, never values
+aws configure list   # the Type column shows where each value came from (env, shared-credentials-file, iam-role); keys are masked</code></pre>
       <h4>Fix</h4>
       <p>Give the job its credentials the standard way: an instance or task role on AWS, <code>AWS_PROFILE</code> exported in the job's environment, or OIDC in CI. Never write keys into the script.</p>
       <h4>Prevent</h4>
@@ -1235,10 +1257,12 @@ aws configure list</code></pre>
       <ul>
         <li>Credentials copied into environment variables from an earlier <code>aws sts assume-role</code> or <code>aws sso login</code></li>
         <li>A job that runs longer than the role's maximum session duration</li>
-        <li>The host clock is wrong, so fresh credentials look expired</li>
+        <li>Old <code>AWS_ACCESS_KEY_ID</code> and <code>AWS_SESSION_TOKEN</code> still exported: they win over the profile, so the CLI never refreshes</li>
+        <li>The host clock is wrong: the CLI does not refresh in time, and requests may fail with RequestExpired or <code>Signature expired</code> instead</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>aws sts get-caller-identity
+      <pre><code>aws configure list   # Type 'env' for access_key: exported keys are being used, not the profile
+aws sts get-caller-identity
 date -u; timedatectl show -p NTPSynchronized</code></pre>
       <h4>Fix</h4>
       <p>Let the CLI refresh credentials itself: use a profile with <code>role_arn</code> and <code>source_profile</code> (or <code>credential_process</code>), or the instance role, instead of exported session keys. Fix the clock with NTP.</p>
@@ -1273,7 +1297,7 @@ aws s3api list-object-versions --bucket &lt;bucket&gt; --prefix &lt;prefix&gt; -
       <h3>pg_dump: server version mismatch</h3>
       <pre class="err-line"><code>pg_dump: error: aborting because of server version mismatch</code></pre>
       <h4>Symptom</h4>
-      <p>The nightly backup starts failing after the database was upgraded. The next line says <code>pg_dump: detail: server version: 16.4; pg_dump version: 14.13</code>.</p>
+      <p>The nightly backup starts failing after the database was upgraded. The next line says <code>pg_dump: detail: server version: 16.4; pg_dump version: 15.8</code>.</p>
       <h4>Why it happens</h4>
       <p>pg_dump refuses to dump a server newer than itself, because it may not understand the newer catalogue.</p>
       <ul>
@@ -1281,11 +1305,11 @@ aws s3api list-object-versions --bucket &lt;bucket&gt; --prefix &lt;prefix&gt; -
         <li>Several PostgreSQL versions are installed and PATH picks the old pg_dump</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>pg_dump --version
+      <pre><code>type -a pg_dump; pg_dump --version   # the one the job runs, and its major version
 psql -Atc 'show server_version'
-ls /usr/lib/postgresql/</code></pre>
+ls /usr/lib/postgresql/   # Debian and Ubuntu; /usr/pgsql-&lt;n&gt;/bin on RHEL</code></pre>
       <h4>Fix</h4>
-      <p>Install the client tools of the server's major version (or newer) and call that pg_dump, for example <code>/usr/lib/postgresql/16/bin/pg_dump</code>.</p>
+      <p>Install the client tools of the server's major version (or newer) and call that pg_dump by its full path, for example <code>/usr/lib/postgresql/16/bin/pg_dump</code> on Debian.</p>
       <h4>Prevent</h4>
       <p>Upgrade the backup host's client tools as part of every database upgrade, and alert on a failed backup the same night.</p>
       <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 19 · Database backups you can restore</a>. <a href="index.html#fix/pg-dump-version-mismatch">Open in Troubleshoot</a></p>
@@ -1298,14 +1322,15 @@ ls /usr/lib/postgresql/</code></pre>
       <h4>Why it happens</h4>
       <p>The server asked for a password and libpq had none: no <code>~/.pgpass</code> entry it could use, and no <code>PGPASSWORD</code>.</p>
       <ul>
-        <li><code>~/.pgpass</code> belongs to another user, or cron runs as a different user</li>
-        <li>Its permissions are wider than 0600, so libpq ignores it</li>
-        <li>The host, port, database or user in the file does not match the connection</li>
+        <li><code>~/.pgpass</code> belongs to another user, or cron runs as a different user or HOME</li>
+        <li>Its permissions are wider than 0600, so libpq ignores it (it prints a warning saying so)</li>
+        <li>The host, port, database or user in the file does not match the connection: the host is compared as text, so <code>db.internal</code> and its IP are different entries</li>
+        <li>By hand you connect over the Unix socket, where <code>pg_hba.conf</code> allows <code>peer</code>; the job uses <code>-h</code>, which hits a <code>host</code> rule that needs a password</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>ls -l ~/.pgpass
-id -un
-PGCONNECT_TIMEOUT=5 psql -w -h db.internal -U backup -d shop -c 'select 1'</code></pre>
+      <pre><code>id -un; echo &quot;$HOME&quot;; ls -l &quot;${PGPASSFILE:-$HOME/.pgpass}&quot;   # the user, and the file libpq will read
+cut -d: -f1-4 &quot;${PGPASSFILE:-$HOME/.pgpass}&quot;   # the host:port:db:user keys, without the passwords
+PGCONNECT_TIMEOUT=5 psql -w -h db.internal -U backup -d shop -c 'select 1'   # the same connection as the job, never prompting</code></pre>
       <h4>Fix</h4>
       <p>Create <code>~/.pgpass</code> for the user that runs the job with <code>host:port:database:user:password</code>, <code>chmod 600</code> it, and pass <code>--no-password</code> (or <code>-w</code>) so a missing password fails at once instead of waiting.</p>
       <h4>Prevent</h4>
@@ -1324,7 +1349,7 @@ PGCONNECT_TIMEOUT=5 psql -w -h db.internal -U backup -d shop -c 'select 1'</code
         <li>The dump does not skip tablespaces</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>mysql -e 'SHOW GRANTS FOR CURRENT_USER()'
+      <pre><code>mysql --defaults-extra-file=/etc/mysql/backup.cnf -e 'SELECT CURRENT_USER(); SHOW GRANTS'   # with the job's own credentials: the account really used, and its grants
 mysqldump --version</code></pre>
       <h4>Fix</h4>
       <p>Add <code>--no-tablespaces</code> (most dumps do not need tablespace definitions), or grant PROCESS to the backup user if you do.</p>
@@ -1341,13 +1366,13 @@ mysqldump --version</code></pre>
       <p>The password was given with <code>-p&lt;password&gt;</code> or <code>--password=</code>. Other users on the host can read command lines in <code>ps</code> and <code>/proc</code>, and it lands in shell history and cron files.</p>
       <ul>
         <li><code>mysqldump -u backup -pS3cret ...</code> in a script or crontab</li>
-        <li><code>MYSQL_PWD</code> in the environment, which has the same problem</li>
+        <li><code>--password=...</code> in a script, a crontab or a wrapper that builds the command line</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>grep -n -- '-p[^ ]' &lt;script&gt;
-crontab -l | grep -n mysql</code></pre>
+      <pre><code>grep -nE -- '-p[^ ]|--password=' &lt;script&gt; | cut -d: -f1   # line numbers only, not the password
+crontab -l | grep -cE -- '-p[^ ]|--password='</code></pre>
       <h4>Fix</h4>
-      <p>Put the credentials in an option file (<code>[client]</code> with <code>user=</code> and <code>password=</code>), <code>chmod 600</code> it, and pass <code>--defaults-extra-file=/etc/mysql/backup.cnf</code> as the first option. Then change the password, because it has been exposed.</p>
+      <p>Put the credentials in an option file (<code>[client]</code> with <code>user=</code> and <code>password=</code>), <code>chmod 600</code> it, and pass <code>--defaults-extra-file=/etc/mysql/backup.cnf</code> as the first option. Then change the password, because it has been exposed. Do not move it to <code>MYSQL_PWD</code>: that hides the warning but is deprecated and no safer.</p>
       <h4>Prevent</h4>
       <p>Review scripts for passwords on command lines; scripts/scan_for_secrets.sh and a secret scanner in CI catch many.</p>
       <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/secretleak">A token in the CI log</a>, then take <a href="index.html#path">Level 19 · Database backups you can restore</a>. <a href="index.html#fix/mysql-password-cli">Open in Troubleshoot</a></p>
@@ -1362,14 +1387,15 @@ crontab -l | grep -n mysql</code></pre>
       <p>The Deployment did not make progress within <code>progressDeadlineSeconds</code> (600 by default). Kubernetes marks it failed but does not roll back on its own.</p>
       <ul>
         <li>The new image crashes on start (CrashLoopBackOff) or fails its readiness probe</li>
-        <li>The image cannot be pulled (ImagePullBackOff)</li>
-        <li>Not enough CPU or memory to schedule the new pods</li>
+        <li>The image cannot be pulled (ImagePullBackOff): a wrong tag, or no pull secret for a private registry</li>
+        <li>Not enough CPU or memory to schedule the new pods (Pending)</li>
+        <li>A ResourceQuota or LimitRange rejects the new pods, so the ReplicaSet never creates them</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>kubectl rollout status deployment/&lt;name&gt; --timeout=10s
-kubectl get pods -l &lt;selector&gt;
-kubectl describe pod &lt;new-pod&gt; | tail -20
-kubectl logs &lt;new-pod&gt; --previous</code></pre>
+      <pre><code>kubectl get pods -l &lt;selector&gt;   # CrashLoopBackOff, ImagePullBackOff, Pending or 0/1 READY point to different causes
+kubectl describe pod &lt;new-pod&gt; | tail -20   # the Events say why
+kubectl logs &lt;new-pod&gt; --previous   # why the last start crashed
+kubectl get events -n &lt;ns&gt; --sort-by=.lastTimestamp | tail   # 'exceeded quota' or FailedCreate: no pods were made at all</code></pre>
       <h4>Fix</h4>
       <p>Roll back with <code>kubectl rollout undo deployment/&lt;name&gt;</code> and confirm with <code>rollout status</code>. Then fix the image or the probe and release again.</p>
       <h4>Prevent</h4>
@@ -1389,8 +1415,8 @@ kubectl logs &lt;new-pod&gt; --previous</code></pre>
         <li>All replicas run on the node being drained</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>kubectl get pdb -A
-kubectl get pods -n &lt;ns&gt; -l &lt;selector&gt; -o wide</code></pre>
+      <pre><code>kubectl get pdb -A   # ALLOWED DISRUPTIONS 0: no eviction is possible right now
+kubectl get pods -n &lt;ns&gt; -l &lt;selector&gt; -o wide   # not-ready replicas, or all of them on this node</code></pre>
       <h4>Fix</h4>
       <p>Wait for the other replicas to become ready, or scale the Deployment up first so the budget allows one eviction. Do not bypass it with <code>--disable-eviction</code>.</p>
       <h4>Prevent</h4>
@@ -1447,10 +1473,11 @@ kubectl get pods -n &lt;ns&gt; -l &lt;selector&gt; -o wide</code></pre>
         <li>A new host not yet in <code>known_hosts</code></li>
         <li>A rebuilt host with a new key</li>
         <li>A different user (cron, CI) with its own empty <code>known_hosts</code></li>
+        <li>An IP address or name now used by a different server (common with cloud IPs), or a real man-in-the-middle</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>ssh-keygen -F &lt;host&gt;
-ssh-keyscan &lt;host&gt; 2&gt;/dev/null | ssh-keygen -lf -</code></pre>
+      <pre><code>ssh-keygen -F &lt;host&gt;   # nothing: unknown host; a line: compare its key with the one below
+ssh-keyscan &lt;host&gt; 2&gt;/dev/null | ssh-keygen -lf -   # the fingerprint the host offers now; check it against the console or inventory</code></pre>
       <h4>Fix</h4>
       <p>Check the key's fingerprint against the host (console, cloud API or your inventory), then add it: <code>ssh-keyscan &lt;host&gt; &gt;&gt; ~/.ssh/known_hosts</code>, or remove a stale one with <code>ssh-keygen -R &lt;host&gt;</code>.</p>
       <h4>Prevent</h4>
@@ -1468,13 +1495,15 @@ ssh-keyscan &lt;host&gt; 2&gt;/dev/null | ssh-keygen -lf -</code></pre>
         <li>The key is not in that host's <code>authorized_keys</code> for this user</li>
         <li>Cron or CI runs without your ssh agent or key file</li>
         <li>Wrong user name for that host</li>
-        <li><code>authorized_keys</code> or <code>~/.ssh</code> has permissions sshd rejects</li>
+        <li><code>authorized_keys</code>, <code>~/.ssh</code> or the home directory has permissions or an owner sshd rejects</li>
+        <li>An RSA key used with an old server or client that can only sign with <code>ssh-rsa</code> (SHA-1), which OpenSSH 8.8 and later refuse by default</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>ssh -v -o BatchMode=yes &lt;user&gt;@&lt;host&gt; true 2&gt;&amp;1 | grep -E 'Offering|Authentications'
-ssh-add -l</code></pre>
+      <pre><code>ssh -v -o BatchMode=yes &lt;user&gt;@&lt;host&gt; true 2&gt;&amp;1 | grep -E 'Offering|Authentications'   # no Offering line: the job has no key to offer
+ssh-add -l
+sudo journalctl -u ssh -u sshd | tail   # on the server: 'bad ownership or modes' or 'Invalid user' name the cause</code></pre>
       <h4>Fix</h4>
-      <p>Add the job's public key to the host for the right user, or point ssh at the key with <code>-i</code> in the job. Fix permissions: <code>chmod 700 ~/.ssh; chmod 600 ~/.ssh/authorized_keys</code>.</p>
+      <p>Add the job's public key to the host for the right user, or point ssh at the key with <code>-i</code> in the job. Fix permissions: <code>chmod go-w ~; chmod 700 ~/.ssh; chmod 600 ~/.ssh/authorized_keys</code>. Replace old RSA keys with ed25519 rather than re-enabling <code>ssh-rsa</code>.</p>
       <h4>Prevent</h4>
       <p>Use one deploy identity managed by configuration management, and test new hosts in the inventory before they join the fleet.</p>
       <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 21 · Fleet operations and drift</a>. <a href="index.html#fix/ssh-publickey-denied">Open in Troubleshoot</a></p>
@@ -1485,10 +1514,11 @@ ssh-add -l</code></pre>
       <h4>Symptom</h4>
       <p>A run over many hosts fails on one host at once (refused), after a long wait (timed out), or on a name (could not resolve hostname).</p>
       <h4>Why it happens</h4>
-      <p>Refused: the host answered, but nothing listens on that port. Timed out: nothing answered, usually a firewall or a host that is down.</p>
+      <p>Refused: the host (or a firewall that rejects rather than drops) answered that nothing listens on that port. Timed out: nothing answered, usually a firewall that drops packets or a host that is down. No route to host: often a host firewall rejecting, as firewalld does by default, not a routing problem.</p>
       <ul>
         <li>sshd is stopped or listens on another port</li>
         <li>A firewall or security group drops port 22 from where you are</li>
+        <li>A host firewall that rejects the connection, which shows as refused or no route to host</li>
         <li>The host is down, or its name points at an old address</li>
         <li>Connecting to a private address from outside the network</li>
       </ul>
@@ -1529,16 +1559,19 @@ stat -c '%a %U' &lt;key&gt;</code></pre>
       <h4>Symptom</h4>
       <p>A reload changes nothing, or a restart takes the site down, after a config change.</p>
       <h4>Why it happens</h4>
-      <p>nginx could not parse its configuration. A reload keeps the old workers running; a restart stops them and cannot start new ones.</p>
+      <p>nginx could not load its configuration or open something it names. A reload keeps the old workers running; a restart stops them and cannot start new ones.</p>
       <ul>
         <li>A typo or a missing semicolon</li>
         <li>An include that points to a missing file or certificate</li>
         <li>A directive from a module that is not loaded</li>
+        <li>The port is taken: <code>bind() to 0.0.0.0:80 failed (98: Address already in use)</code> at start, which <code>nginx -t</code> does not catch</li>
+        <li>You edited a file that is not loaded, or the service starts nginx with another <code>-c</code> file</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>sudo nginx -t
-sudo nginx -T | sed -n '1,40p'
-journalctl -u nginx -n 30</code></pre>
+      <pre><code>sudo nginx -t   # names the file and line of a parse error
+sudo nginx -T | grep '^# configuration file'   # the files really loaded
+journalctl -u nginx -n 30
+sudo ss -ltnp 'sport = :80'   # who already holds the port</code></pre>
       <h4>Fix</h4>
       <p>Fix the line <code>nginx -t</code> names, run <code>nginx -t</code> again, then reload (not restart) and check the site answers.</p>
       <h4>Prevent</h4>
@@ -1575,10 +1608,12 @@ journalctl -u nginx -n 30</code></pre>
         <li>Someone is applying right now</li>
         <li>A drift check or CI plan takes the lock while it runs</li>
         <li>A run was killed and left a stale lock</li>
+        <li>The lock call itself failed: no permission on the lock table (or the S3 lock file), or a wrong table name or region. The detail then shows an AWS error such as AccessDeniedException instead of Lock Info</li>
       </ul>
       <h4>Confirm</h4>
       <pre><code>terraform plan -lock-timeout=60s
-aws dynamodb get-item --table-name &lt;lock-table&gt; --key '{&quot;LockID&quot;:{&quot;S&quot;:&quot;&lt;bucket&gt;/&lt;key&gt;-md5&quot;}}'</code></pre>
+aws dynamodb get-item --table-name &lt;lock-table&gt; --key '{&quot;LockID&quot;:{&quot;S&quot;:&quot;&lt;bucket&gt;/&lt;key&gt;&quot;}}'   # Info shows who holds it and since when (the &lt;key&gt;-md5 item is the state checksum, not the lock)
+aws s3api head-object --bucket &lt;bucket&gt; --key &lt;key&gt;.tflock   # with use_lockfile = true (Terraform 1.10 and later)</code></pre>
       <h4>Fix</h4>
       <p>Wait, or use <code>-lock-timeout</code>. Remove a lock with <code>terraform force-unlock &lt;ID&gt;</code> only after you know its run is dead.</p>
       <h4>Prevent</h4>
@@ -1638,13 +1673,14 @@ psql -h staging -Atc 'select count(*) from customers where email not like ''%@ex
       <p>A backup holds every row of the database. Whoever can read it has all the personal data, without any of the application's access controls.</p>
       <ul>
         <li>The default umask 022 creates files as 644</li>
-        <li>Uploads without <code>--sse</code>, or a bucket with no default encryption</li>
+        <li>Off-site copies protected only by S3's default SSE-S3 (on for every new object since January 2023), which anyone who can read the bucket can still read, or copied to storage with no encryption at all</li>
+        <li>A bucket policy or ACL that allows public or cross-account reads</li>
         <li>Old backups never deleted, so years of data sit in one place</li>
       </ul>
       <h4>Confirm</h4>
-      <pre><code>ls -l /var/backups/
-aws s3api get-bucket-encryption --bucket &lt;bucket&gt;
-aws s3api get-public-access-block --bucket &lt;bucket&gt;</code></pre>
+      <pre><code>ls -l /var/backups/   # r for group or other: readable by others on the host
+aws s3api get-bucket-encryption --bucket &lt;bucket&gt;   # AES256 is SSE-S3; aws:kms with your own key limits who can decrypt
+aws s3api get-public-access-block --bucket &lt;bucket&gt;   # all four settings should be true</code></pre>
       <h4>Fix</h4>
       <p><code>chmod 600</code> the files (and <code>umask 077</code> in the backup job), encrypt off-site copies (SSE-KMS or client-side), block public access on the bucket, and delete backups beyond the retention period.</p>
       <h4>Prevent</h4>
