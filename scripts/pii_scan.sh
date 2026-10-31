@@ -18,8 +18,8 @@
 # the same); use an allowlist rather than dropping the rule.
 #
 # Usage: pii_scan.sh [-a allowlist] [-c] [-j] [path ...]      (default path: .; - reads standard input)
-#   -a  file of regular expressions, one per line, matched against "file:line:value";
-#       matching findings are ignored (test fixtures, documented sample numbers)
+#   -a  file of regular expressions, one per line (# comments), matched against
+#       "file:line:value"; matching findings are ignored (test fixtures, sample numbers)
 #   -c  counts per file only, no per-line findings
 #   -j  JSON: {"findings": [...], "files": {file: {kind: count}}}
 # Example: pii_scan.sh -a .piiallow /var/log/shop
@@ -66,7 +66,8 @@ Voter ID\t\\b[A-Z]{3}[0-9]{7}\\b'
 
 # grep prints file:line:value. Binary files, .git and dependency folders are skipped.
 grep_=(grep -rnHIE --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.terraform --exclude-dir=vendor)
-allowed() { if [[ -n "$allow" ]]; then grep -vEf "$allow" || true; else cat; fi; }
+# Allowlist lines starting with # are comments; blank lines are dropped (an empty pattern matches everything).
+allowed() { if [[ -n "$allow" ]]; then grep -vEf <(grep -vE '^[[:space:]]*(#|$)' "$allow") || true; else cat; fi; }
 candidates() {
   local kind re only
   while IFS=$'\t' read -r kind re; do

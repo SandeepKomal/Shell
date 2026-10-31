@@ -1,0 +1,8 @@
+# Synthetic values this repository uses on purpose: reserved example.com addresses,
+# the made-up test numbers in tests/ and the playground, and pii_scan.sh's own
+# header and checksum tables. Each line is a regular expression matched against
+# "file:line:value" (see scripts/pii_scan.sh -h).
+@example\.com
+^\./scripts/pii_scan\.sh:
+^\./tests/test_scripts\.sh:
+9876543210$
