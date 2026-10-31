@@ -7,6 +7,7 @@
 [![Pages](https://github.com/SandeepKomal/Shell/actions/workflows/pages.yml/badge.svg)](https://github.com/SandeepKomal/Shell/actions/workflows/pages.yml)
 [![Bash](https://img.shields.io/badge/Bash-scripts-4EAA25?logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/manual/)
 ![Security](https://img.shields.io/badge/security-ShellCheck%20%C2%B7%20personal--data%20scan-2ea44f)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 ![No trackers](https://img.shields.io/badge/site-no%20trackers%20%C2%B7%20no%20cookies-2ea44f)
 [![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen)](CONTRIBUTING.md)
 ![Last commit](https://img.shields.io/github/last-commit/SandeepKomal/Shell)
@@ -340,7 +341,7 @@ See [PRIVACY.md](PRIVACY.md) for the full privacy policy.
 
 ## License and trademarks
 
-The site is published as open source under the MIT License; this repository does not yet include a LICENSE file.
+MIT, see [LICENSE](LICENSE).
 
 Bash is a GNU project of the Free Software Foundation. This project is independent and not affiliated with the FSF or the GNU project. AWS, Kubernetes, Terraform and other product names are trademarks of their owners; this project is not affiliated with them.
 
