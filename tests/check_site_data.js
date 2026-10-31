@@ -33,6 +33,20 @@ for (const f of fs.readdirSync(path.join(root, "scripts"))) {
   assert.ok(Q.levels.some((l) => l.scripts.includes(`scripts/${f}`)) || ["aws_resource_count.sh", "check_http_endpoint.sh", "docker_health.sh", "git_changed_files.sh", "k8s_pod_health.sh", "process_watch.sh", "ssl_cert_expiry.sh"].includes(f), `scripts/${f} is used by a level`);
 }
 
+// Scripts catalogue: every script in scripts/ once, complete, in a known group.
+const catalogued = Q.scripts.map((x) => x.path);
+assert.deepStrictEqual([...catalogued].sort(), fs.readdirSync(path.join(root, "scripts")).map((f) => `scripts/${f}`).sort(), "the catalogue lists every script in scripts/ exactly once");
+for (const sc of Q.scripts) {
+  for (const k of ["what", "usage", "sample", "exit"]) assert.ok(sc[k] && sc[k].length > 5, `catalogue ${sc.path}: ${k}`);
+  assert.ok(Q.scriptGroups.includes(sc.group), `catalogue ${sc.path}: group ${sc.group}`);
+  assert.ok(sc.usage.includes(sc.path.split("/").pop()), `catalogue ${sc.path}: the usage runs it`);
+  ticks(sc.exit, `catalogue ${sc.path}`);
+  // Scripts that print usage from their header say Usage: and the exit codes there too.
+  const src = fs.readFileSync(path.join(root, sc.path), "utf8");
+  if (sc.isNew) assert.match(src, /^# Usage: [\s\S]*^# Exit: /m, `${sc.path}: header with Usage and Exit`);
+  if (sc.isNew) assert.match(src, /^set -euo pipefail$/m, `${sc.path}: strict mode`);
+}
+
 // Quiz
 let total = 0;
 assert.deepStrictEqual(Object.keys(quiz).sort(), Q.levels.map((l) => l.id), "a quiz for every level and no other");
@@ -96,7 +110,23 @@ const PASTED = {
   "nohup: ignoring input and appending output to 'nohup.out'": "nohup-ignoring-input",
   "curl: (28) Operation timed out after 10000 milliseconds with 0 bytes received": "timeout-124",
   "date: invalid date 'notAfter=Nov 15 12:00:00 2026 GMT'": "date-invalid",
-  "background job failed but script exit 0": "background-status-lost"
+  "background job failed but script exit 0": "background-status-lost",
+  "Unable to locate credentials. You can configure credentials by running \"aws configure\".": "aws-no-credentials",
+  "An error occurred (ExpiredToken) when calling the DescribeInstances operation: The security token included in the request is expired": "aws-expired-token",
+  "pg_dump: error: aborting because of server version mismatch": "pg-dump-version-mismatch",
+  "pg_dump: error: connection to server at \"db.internal\" (10.0.2.15), port 5432 failed: fe_sendauth: no password supplied": "pg-no-password",
+  "mysqldump: Error: 'Access denied; you need (at least one of) the PROCESS privilege(s) for this operation' when trying to dump tablespaces": "mysqldump-process-privilege",
+  "mysqldump: [Warning] Using a password on the command line interface can be insecure.": "mysql-password-cli",
+  "error: deployment \"api\" exceeded its progress deadline": "k8s-progress-deadline",
+  "Cannot evict pod as it would violate the pod's disruption budget.": "k8s-drain-pdb",
+  "cannot delete Pods with local storage (use --delete-emptydir-data to override)": "k8s-drain-local-storage",
+  "cannot delete Pods declare no controller (use --force to override): default/debug-shell": "k8s-drain-no-controller",
+  "Host key verification failed.": "ssh-host-key-verification",
+  "deploy@web-02: Permission denied (publickey).": "ssh-publickey-denied",
+  "nginx: [emerg] unknown directive \"proxy_passs\" in /etc/nginx/sites-enabled/shop:12": "nginx-emerg",
+  "Error: Error acquiring the state lock": "terraform-state-lock",
+  "terraform plan -detailed-exitcode exit code 2": "terraform-exit-2",
+  "personal data in logs": "personal-data-in-logs"
 };
 for (const [text, id] of Object.entries(PASTED)) {
   const top = window.SQSearch.rank(Q.doctor, text)[0];

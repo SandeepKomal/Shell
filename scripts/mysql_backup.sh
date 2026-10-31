@@ -87,4 +87,4 @@ if [[ -n "$s3" ]]; then
 fi
 
 mapfile -t old < <(find "$dest" -maxdepth 1 -name "$db-*.sql.gz" -printf '%p\n' | sort -r | tail -n +"$(( keep + 1 ))")
-for f in "${old[@]}"; do rm -f -- "$f" "$f.sha256"; echo "deleted $f"; done
+for f in "${old[@]}"; do rm -f -- "${f:?}" "${f:?}.sha256"; echo "deleted $f"; done

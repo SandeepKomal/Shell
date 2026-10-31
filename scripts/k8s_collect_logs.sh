@@ -62,7 +62,7 @@ while IFS= read -r pod; do
   for c in $("${k[@]}" get pod "$p" -o jsonpath='{.spec.initContainers[*].name} {.spec.containers[*].name}' 2>/dev/null); do
     grab "pods/$p.$c.log" logs "$p" -c "$c" --since="$since" --timestamps
     # --previous only exists after a restart; its absence is normal, not an error.
-    "${k[@]}" logs "$p" -c "$c" --previous --since="$since" --timestamps > "$dir/pods/$p.$c.previous.log" 2>/dev/null || rm -f "$dir/pods/$p.$c.previous.log"
+    "${k[@]}" logs "$p" -c "$c" --previous --since="$since" --timestamps > "$dir/pods/$p.$c.previous.log" 2>/dev/null || rm -f -- "${dir:?}/pods/$p.$c.previous.log"
   done
 done < "$dir/pod-names.txt"
 

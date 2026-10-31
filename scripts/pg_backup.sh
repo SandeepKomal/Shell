@@ -85,4 +85,4 @@ fi
 
 # Rotate: the newest $keep stay, counting the one just made.
 mapfile -t old < <(find "$dest" -maxdepth 1 -name "$db-*.dump" -printf '%p\n' | sort -r | tail -n +"$(( keep + 1 ))")
-for f in "${old[@]}"; do rm -f -- "$f" "$f.sha256"; echo "deleted $f"; done
+for f in "${old[@]}"; do rm -f -- "${f:?}" "${f:?}.sha256"; echo "deleted $f"; done

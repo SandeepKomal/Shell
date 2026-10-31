@@ -59,13 +59,14 @@
   }
 
   // --- tabs and deep links ---------------------------------------------------
-  // #path, #quiz, #xray, #doctor, #cheats, #arch; #play/<scenario> and #fix/<problem> open one item.
+  // #path, #quiz, #scripts, #xray, #doctor, #cheats, #arch; #play/<scenario>, #fix/<problem> and
+  // #script/<name> open one item.
 
-  const tabs = ["path", "quiz", "xray", "doctor", "cheats", "arch"];
+  const tabs = ["path", "quiz", "scripts", "xray", "doctor", "cheats", "arch"];
   let current = null;
   function show() {
     const [want, sub] = location.hash.slice(1).split("/");
-    const tab = want === "play" ? "path" : want === "fix" ? "doctor" : tabs.includes(want) ? want : "path";
+    const tab = want === "play" ? "path" : want === "fix" ? "doctor" : want === "script" ? "scripts" : tabs.includes(want) ? want : "path";
     if (tab !== current) {
       const page = $("#tab-" + tab);
       page.classList.remove("tab-in");
@@ -82,6 +83,7 @@
     });
     if (want === "fix" && sub) { const i = Q.doctor.findIndex((d) => d.id === sub); if (i >= 0) { renderDoctor(i); requestAnimationFrame(() => scrollToEl($("#doctor-out"))); } }
     if (want === "play" && sub && window.SQPlayground) window.SQPlayground.load(sub);
+    if (want === "script" && sub) openScript(sub);
     return { want, sub };
   }
   window.addEventListener("hashchange", () => {
@@ -119,7 +121,7 @@
       ["#quiz", "Quiz", "Read code like a reviewer.", "Predict what bash does."],
       ["#arch", "How bash runs", "How a line runs.", "Tokens, expansions, fork and exec."],
       ["#cheats", "Cheat sheet", "Copy, fill, run.", "The idioms scripts use every day, each one runnable."],
-      [Q.repo + "/tree/main/scripts", "Scripts", "Tested tools, ready to use.", "Retries, backups, deploys, audits: the repository's scripts, each used in a level.", "wide"],
+      ["#scripts", "Scripts", `${Q.scripts.length} tested scripts, ready to use.`, "Retries, backups, deploys, AWS, Kubernetes, fleets and personal data: usage, sample output and exit codes for each.", "wide"],
       ["#doctor", "Stuck on an error?", "Learn why it happens, then practise the fix.", "Paste the error: cause, confirm, fix, prevent.", "wide"]
     ];
     $("#bento").replaceChildren(...tiles.map(([href, k, title, text, size]) => h("a.tile" + (size ? "." + size : ""), { href }, h("div", null, h("div.k", null, k), h("h3", null, title)), h("p", null, text))));
@@ -179,6 +181,55 @@
     $("#bar-fill").style.width = (done.size / Q.levels.length * 100) + "%";
     $("#bar").setAttribute("aria-valuenow", String(done.size));
     $("#bar-text").textContent = `${done.size} of ${Q.levels.length} levels complete`;
+  }
+
+  // --- scripts catalogue ---------------------------------------------------------
+
+  let scriptGroup = "";
+  const scriptName = (p) => p.split("/").pop();
+  function renderScriptGroups() {
+    const counts = Object.fromEntries(Q.scriptGroups.map((g) => [g, Q.scripts.filter((x) => x.group === g).length]));
+    $("#script-groups").replaceChildren(...["", ...Q.scriptGroups].map((g) => h("button.chip", {
+      type: "button", "aria-pressed": String(g === scriptGroup),
+      onclick: () => { scriptGroup = g; renderScriptGroups(); renderScripts(); }
+    }, g || "All", h("span.count", null, String(g ? counts[g] : Q.scripts.length)))));
+  }
+  function scriptCard(sc) {
+    const lv = Q.levels.find((l) => l.scripts.includes(sc.path));
+    const name = scriptName(sc.path);
+    return h("details.card.script", { id: "script-" + name.replace(/\.sh$/, "") },
+      h("summary", null,
+        h("span.script-name", null, h("code", null, name), sc.isNew ? h("span.badge-new", null, "New") : null),
+        h("span.script-what", null, sc.what)),
+      h("div.script-body", null,
+        h("h4", null, "Usage"), h("pre", null, h("code", null, sc.usage)),
+        h("h4", null, "Sample output"), h("pre.sample", null, h("code", null, sc.sample)),
+        h("h4", null, "Exit status"), h("p", null, ...rich(sc.exit)),
+        h("div.level-links", null,
+          h("a.chip", { href: repoUrl(sc.path) }, "Read the source"),
+          copyButton(sc.usage.split("\n")[0].replace(/\s+#.*$/, ""), "Copy usage"),
+          copyButton(pageUrl("script/" + name.replace(/\.sh$/, "")), "Copy link", "Link copied"),
+          lv ? h("a.chip", { href: "#level-" + lv.id, onclick: () => { location.hash = "path"; setTimeout(() => { const el = document.getElementById("level-" + lv.id); el.querySelector("details").open = true; scrollToEl(el); }, 0); } }, `Level ${lv.id} · ${lv.title}`) : null)));
+  }
+  function renderScripts() {
+    const ws = $("#scripts-q").value.toLowerCase().split(/\s+/).filter(Boolean);
+    const shown = Q.scripts.filter((sc) => (!scriptGroup || sc.group === scriptGroup) && ws.every((w) => `${sc.path} ${sc.group} ${sc.what} ${sc.usage}`.toLowerCase().includes(w)));
+    const out = $("#scripts-list");
+    out.replaceChildren();
+    for (const g of Q.scriptGroups) {
+      const list = shown.filter((sc) => sc.group === g);
+      if (list.length) out.append(h("h3.group", null, g), h("div.script-cards", null, list.map(scriptCard)));
+    }
+    if (!shown.length) out.append(h("p.muted", null, "No script matches. Try backup, rollout, ssh or personal."));
+    $("#scripts-count").textContent = `${shown.length} of ${Q.scripts.length} scripts`;
+  }
+  function openScript(name) {
+    scriptGroup = "";
+    $("#scripts-q").value = "";
+    renderScriptGroups();
+    renderScripts();
+    const el = document.getElementById("script-" + name);
+    if (el) { el.open = true; requestAnimationFrame(() => scrollToEl(el)); }
   }
 
   // --- quiz ------------------------------------------------------------------
@@ -370,7 +421,7 @@
 
   // --- page guides ---------------------------------------------------------------
 
-  const CLOSED = ["playground", "path", "doctor", "xray"];
+  const CLOSED = ["playground", "path", "doctor", "xray", "scripts"];
   function renderGuides() {
     const state = store.get("guides", {});
     document.querySelectorAll(".guide-slot").forEach((slot) => {
@@ -402,12 +453,14 @@
       { label: "Playground: fix a broken script", kind: "Section", run: () => go("path", () => scrollToEl($(".playground"))) },
       { label: "Your path", kind: "Section", run: () => go("path", () => scrollToEl($("#path-title"))) },
       { label: "Exam: random questions from every level", kind: "Quiz", run: () => go("quiz", () => { $("#quiz-level").value = "exam"; renderQuiz(); }) },
+      { label: "Scripts: the catalogue", kind: "Section", run: () => go("scripts", () => $("#scripts-q").focus()) },
       { label: "Script X-ray", kind: "Section", run: () => go("xray") },
       { label: "Fix: troubleshoot an error", kind: "Section", run: () => go("doctor", () => $("#doctor-q").focus()) },
       { label: "Cheat sheet", kind: "Section", run: () => go("cheats", () => $("#cheat-q").focus()) },
       { label: "How bash runs a command", kind: "Section", run: () => go("arch") },
       ...Q.levels.map((lv) => ({ label: `${lv.id} · ${lv.title}`, hint: lv.topic, kind: "Level", run: () => go("path", () => { const el = document.getElementById("level-" + lv.id); el.querySelector("details").open = true; scrollToEl(el); }) })),
       ...Q.levels.map((lv) => ({ label: `Quiz: ${lv.id} · ${lv.title}`, kind: "Quiz", run: () => go("quiz", () => { $("#quiz-level").value = lv.id; renderQuiz(); }) })),
+      ...Q.scripts.map((sc) => ({ label: `Script: ${scriptName(sc.path)}`, hint: sc.what, kind: "Scripts", run: () => go("script/" + scriptName(sc.path).replace(/\.sh$/, "")) })),
       ...Q.doctor.map((d) => ({ label: `Error: ${d.title}`, hint: d.error, kind: "Troubleshoot", run: () => go("fix/" + d.id) })),
       ...scenarios().map((s) => ({ label: `Scenario: ${s.title}`, hint: s.group, kind: "Playground", run: () => go("play/" + s.id) }))
     ];
@@ -470,12 +523,15 @@
   $("#door-go").addEventListener("click", doorGo);
   $("#door-q").addEventListener("keydown", (e) => { if (e.key === "Enter") doorGo(); });
   $("#cheat-q").addEventListener("input", renderCheats);
+  $("#scripts-q").addEventListener("input", renderScripts);
   $("#forget").addEventListener("click", forgetEverything);
 
   window.SQUI = { h, rich, practise };
   drawSignature(false);
   renderGuides();
   renderQuiz();
+  renderScriptGroups();
+  renderScripts();
   show();
   // The scenario chips and Try buttons need the playground, which loads after this script.
   window.addEventListener("DOMContentLoaded", () => {

@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
-  <meta name="description" content="Every common bash error explained: what it means, why it happens, how to confirm it, how to fix it and how to prevent it. 45 entries, from command not found to unbound variable.">
+  <meta name="description" content="Every common bash error explained: what it means, why it happens, how to confirm it, how to fix it and how to prevent it. 65 entries, from command not found to unbound variable.">
   <meta property="og:type" content="article">
   <meta property="og:title" content="Bash errors, explained">
-  <meta property="og:description" content="Symptom, cause, confirm, fix and prevent for 45 common bash errors.">
+  <meta property="og:description" content="Symptom, cause, confirm, fix and prevent for 65 common bash errors.">
   <meta property="og:url" content="https://sandeepkomal.github.io/Shell/problems.html">
   <link rel="canonical" href="https://sandeepkomal.github.io/Shell/problems.html">
   <title>Bash errors explained</title>
@@ -35,6 +35,10 @@
       <li>Jobs and signals: <a href="#background-status-lost">A failed background job did not fail the script</a>, <a href="#wait-not-child">wait: pid is not a child of this shell</a>, <a href="#terminated">Terminated</a>, <a href="#nohup-ignoring-input">nohup: ignoring input and appending output to 'nohup.out'</a>, <a href="#timeout-124">Exit status 124 from timeout</a></li>
       <li>Exit status: <a href="#exit-status-codes">What does exit status 126, 127, 130 or 137 mean?</a>, <a href="#exits-silently">Script exits silently with set -e</a>, <a href="#set-e-did-not-stop">set -e did not stop the script</a>, <a href="#variable-empty-after-loop">A variable is empty after a loop</a>, <a href="#last-line-missing">The last line of a file is skipped</a></li>
       <li>Cron and environment: <a href="#works-in-terminal-not-cron">Works in the terminal, fails from cron</a>, <a href="#curl-errors">curl: (22) The requested URL returned error</a></li>
+      <li>Cloud and databases: <a href="#aws-no-credentials">Unable to locate credentials</a>, <a href="#aws-expired-token">ExpiredToken: the security token is expired</a>, <a href="#s3-sync-delete">aws s3 sync --delete removed the backups</a>, <a href="#pg-dump-version-mismatch">pg_dump: server version mismatch</a>, <a href="#pg-no-password">fe_sendauth: no password supplied</a>, <a href="#mysqldump-process-privilege">mysqldump needs the PROCESS privilege</a>, <a href="#mysql-password-cli">Using a password on the command line interface can be insecure</a></li>
+      <li>Kubernetes: <a href="#k8s-progress-deadline">deployment exceeded its progress deadline</a>, <a href="#k8s-drain-pdb">Cannot evict pod: it would violate the disruption budget</a>, <a href="#k8s-drain-local-storage">cannot delete Pods with local storage</a>, <a href="#k8s-drain-no-controller">cannot delete Pods declare no controller</a></li>
+      <li>Fleet and drift: <a href="#ssh-host-key-verification">Host key verification failed</a>, <a href="#ssh-publickey-denied">Permission denied (publickey)</a>, <a href="#nginx-emerg">nginx: [emerg] ... configuration file test failed</a>, <a href="#terraform-exit-2">terraform plan -detailed-exitcode exits 2</a>, <a href="#terraform-state-lock">Error acquiring the state lock</a></li>
+      <li>Personal data: <a href="#personal-data-in-logs">Personal data found in application logs</a>, <a href="#test-data-from-production">Production personal data in a test environment</a>, <a href="#unencrypted-backups">Database backups readable by anyone on the host</a>, <a href="#no-retention-limit">Personal data kept with no retention limit</a></li>
     </ul>
     <h2 class="stage-h">Running scripts</h2>
     <section class="card problem" id="command-not-found">
@@ -960,6 +964,433 @@ getent hosts &lt;host&gt;</code></pre>
       <h4>Prevent</h4>
       <p>Always use <code>curl -fsS</code> in scripts so errors are not mistaken for content.</p>
       <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/retry">Retry with backoff</a> · <a href="index.html#play/curlfail">curl says success on a 500</a> · <a href="index.html#play/emptytest">unary operator expected</a>, then take <a href="index.html#path">Level 14 · Jobs, concurrency and retries</a>. <a href="index.html#fix/curl-errors">Open in Troubleshoot</a></p>
+    </section>
+    <h2 class="stage-h">Cloud and databases</h2>
+    <section class="card problem" id="aws-no-credentials">
+      <h3>Unable to locate credentials</h3>
+      <pre class="err-line"><code>Unable to locate credentials. You can configure credentials by running &quot;aws configure&quot;.</code></pre>
+      <h4>Symptom</h4>
+      <p>An AWS CLI call that works in your terminal fails from cron, a container or CI.</p>
+      <h4>Why it happens</h4>
+      <p>The CLI looked through its whole credential chain (environment variables, the shared credentials and config files, SSO, the container or instance role) and found nothing for this process.</p>
+      <ul>
+        <li>Cron runs with a different HOME or user, so <code>~/.aws</code> is not the one you configured</li>
+        <li><code>AWS_PROFILE</code> is set in your shell but not exported to the job</li>
+        <li>On EC2 the instance has no role, or the metadata service needs IMDSv2 and the hop limit is too low for a container</li>
+        <li>SSO credentials expired and need <code>aws sso login</code></li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>aws sts get-caller-identity
+env | grep -E '^AWS_' | cut -d= -f1
+aws configure list</code></pre>
+      <h4>Fix</h4>
+      <p>Give the job its credentials the standard way: an instance or task role on AWS, <code>AWS_PROFILE</code> exported in the job's environment, or OIDC in CI. Never write keys into the script.</p>
+      <h4>Prevent</h4>
+      <p>Start AWS scripts with <code>aws sts get-caller-identity</code> (or a preflight check) so a missing identity fails loudly before any work.</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 18 · AWS from the shell</a>. <a href="index.html#fix/aws-no-credentials">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="aws-expired-token">
+      <h3>ExpiredToken: the security token is expired</h3>
+      <pre class="err-line"><code>An error occurred (ExpiredToken) when calling the DescribeInstances operation: The security token included in the request is expired</code></pre>
+      <h4>Symptom</h4>
+      <p>A long job or a job started from an old shell fails part way with ExpiredToken (or RequestExpired).</p>
+      <h4>Why it happens</h4>
+      <p>Temporary credentials (an assumed role, SSO or session token) have a lifetime. They were valid when the job started and expired before it finished.</p>
+      <ul>
+        <li>Credentials copied into environment variables from an earlier <code>aws sts assume-role</code> or <code>aws sso login</code></li>
+        <li>A job that runs longer than the role's maximum session duration</li>
+        <li>The host clock is wrong, so fresh credentials look expired</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>aws sts get-caller-identity
+date -u; timedatectl show -p NTPSynchronized</code></pre>
+      <h4>Fix</h4>
+      <p>Let the CLI refresh credentials itself: use a profile with <code>role_arn</code> and <code>source_profile</code> (or <code>credential_process</code>), or the instance role, instead of exported session keys. Fix the clock with NTP.</p>
+      <h4>Prevent</h4>
+      <p>Do not export temporary keys into long-running jobs; use profiles or roles the CLI can renew.</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 18 · AWS from the shell</a>. <a href="index.html#fix/aws-expired-token">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="s3-sync-delete">
+      <h3>aws s3 sync --delete removed the backups</h3>
+      <pre class="err-line"><code>delete: s3://acme-backups/db/shop-20261029-020000.dump</code></pre>
+      <h4>Symptom</h4>
+      <p>After a backup sync the bucket is empty or missing objects, and the job reported success.</p>
+      <h4>Why it happens</h4>
+      <p><code>--delete</code> makes the destination match the source. When the source is empty (a disk that did not mount, a wrong path, a failed export), matching it means deleting everything.</p>
+      <ul>
+        <li>The backup volume was not mounted, so the folder existed but was empty</li>
+        <li>A variable for the source path was empty or wrong</li>
+        <li>The order of source and destination was swapped</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>ls -A &lt;source&gt; | head
+mountpoint &lt;source&gt;
+aws s3 sync &lt;source&gt; s3://&lt;bucket&gt;/&lt;prefix&gt; --delete --dryrun | grep -c delete:
+aws s3api list-object-versions --bucket &lt;bucket&gt; --prefix &lt;prefix&gt; --max-items 5</code></pre>
+      <h4>Fix</h4>
+      <p>If versioning is on, restore the objects from their previous versions (delete the delete markers). Then guard the job: refuse an empty source and check the mount before syncing.</p>
+      <h4>Prevent</h4>
+      <p>Turn on bucket versioning and Object Lock or a lifecycle rule for old versions. Check the source (<code>mountpoint -q</code>, a minimum file count), and run <code>--dryrun</code> in review. scripts/s3_backup_sync.sh refuses an empty source.</p>
+      <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/s3empty">sync --delete emptied the bucket</a>, then take <a href="index.html#path">Level 18 · AWS from the shell</a>. <a href="index.html#fix/s3-sync-delete">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="pg-dump-version-mismatch">
+      <h3>pg_dump: server version mismatch</h3>
+      <pre class="err-line"><code>pg_dump: error: aborting because of server version mismatch</code></pre>
+      <h4>Symptom</h4>
+      <p>The nightly backup starts failing after the database was upgraded. The next line says <code>pg_dump: detail: server version: 16.4; pg_dump version: 14.13</code>.</p>
+      <h4>Why it happens</h4>
+      <p>pg_dump refuses to dump a server newer than itself, because it may not understand the newer catalogue.</p>
+      <ul>
+        <li>The database (often a managed service such as RDS) was upgraded, the backup host was not</li>
+        <li>Several PostgreSQL versions are installed and PATH picks the old pg_dump</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>pg_dump --version
+psql -Atc 'show server_version'
+ls /usr/lib/postgresql/</code></pre>
+      <h4>Fix</h4>
+      <p>Install the client tools of the server's major version (or newer) and call that pg_dump, for example <code>/usr/lib/postgresql/16/bin/pg_dump</code>.</p>
+      <h4>Prevent</h4>
+      <p>Upgrade the backup host's client tools as part of every database upgrade, and alert on a failed backup the same night.</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 19 · Database backups you can restore</a>. <a href="index.html#fix/pg-dump-version-mismatch">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="pg-no-password">
+      <h3>fe_sendauth: no password supplied</h3>
+      <pre class="err-line"><code>pg_dump: error: connection to server at &quot;db.internal&quot; (10.0.2.15), port 5432 failed: fe_sendauth: no password supplied</code></pre>
+      <h4>Symptom</h4>
+      <p>The backup works when you run it by hand and fails from cron, or it hangs waiting for a password prompt.</p>
+      <h4>Why it happens</h4>
+      <p>The server asked for a password and libpq had none: no <code>~/.pgpass</code> entry it could use, and no <code>PGPASSWORD</code>.</p>
+      <ul>
+        <li><code>~/.pgpass</code> belongs to another user, or cron runs as a different user</li>
+        <li>Its permissions are wider than 0600, so libpq ignores it</li>
+        <li>The host, port, database or user in the file does not match the connection</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>ls -l ~/.pgpass
+id -un
+PGCONNECT_TIMEOUT=5 psql -w -h db.internal -U backup -d shop -c 'select 1'</code></pre>
+      <h4>Fix</h4>
+      <p>Create <code>~/.pgpass</code> for the user that runs the job with <code>host:port:database:user:password</code>, <code>chmod 600</code> it, and pass <code>--no-password</code> (or <code>-w</code>) so a missing password fails at once instead of waiting.</p>
+      <h4>Prevent</h4>
+      <p>Run backups non-interactively with <code>-w</code>; never put the password on the command line or in the script.</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 19 · Database backups you can restore</a>. <a href="index.html#fix/pg-no-password">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="mysqldump-process-privilege">
+      <h3>mysqldump needs the PROCESS privilege</h3>
+      <pre class="err-line"><code>mysqldump: Error: 'Access denied; you need (at least one of) the PROCESS privilege(s) for this operation' when trying to dump tablespaces</code></pre>
+      <h4>Symptom</h4>
+      <p>After a MySQL upgrade, the backup user's dumps fail or print this error.</p>
+      <h4>Why it happens</h4>
+      <p>Since MySQL 8.0.21, dumping tablespace information needs the global PROCESS privilege, which a least-privilege backup user usually lacks.</p>
+      <ul>
+        <li>The backup user has SELECT, SHOW VIEW, TRIGGER, EVENT and LOCK TABLES, but not PROCESS</li>
+        <li>The dump does not skip tablespaces</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>mysql -e 'SHOW GRANTS FOR CURRENT_USER()'
+mysqldump --version</code></pre>
+      <h4>Fix</h4>
+      <p>Add <code>--no-tablespaces</code> (most dumps do not need tablespace definitions), or grant PROCESS to the backup user if you do.</p>
+      <h4>Prevent</h4>
+      <p>Pin the dump options in one script (scripts/mysql_backup.sh) and test it against the new version before upgrading production.</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 19 · Database backups you can restore</a>. <a href="index.html#fix/mysqldump-process-privilege">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="mysql-password-cli">
+      <h3>Using a password on the command line interface can be insecure</h3>
+      <pre class="err-line"><code>mysqldump: [Warning] Using a password on the command line interface can be insecure.</code></pre>
+      <h4>Symptom</h4>
+      <p>Cron mails this warning every night, or it shows up in the backup log.</p>
+      <h4>Why it happens</h4>
+      <p>The password was given with <code>-p&lt;password&gt;</code> or <code>--password=</code>. Other users on the host can read command lines in <code>ps</code> and <code>/proc</code>, and it lands in shell history and cron files.</p>
+      <ul>
+        <li><code>mysqldump -u backup -pS3cret ...</code> in a script or crontab</li>
+        <li><code>MYSQL_PWD</code> in the environment, which has the same problem</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>grep -n -- '-p[^ ]' &lt;script&gt;
+crontab -l | grep -n mysql</code></pre>
+      <h4>Fix</h4>
+      <p>Put the credentials in an option file (<code>[client]</code> with <code>user=</code> and <code>password=</code>), <code>chmod 600</code> it, and pass <code>--defaults-extra-file=/etc/mysql/backup.cnf</code> as the first option. Then change the password, because it has been exposed.</p>
+      <h4>Prevent</h4>
+      <p>Review scripts for passwords on command lines; scripts/scan_for_secrets.sh and a secret scanner in CI catch many.</p>
+      <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/secretleak">A token in the CI log</a>, then take <a href="index.html#path">Level 19 · Database backups you can restore</a>. <a href="index.html#fix/mysql-password-cli">Open in Troubleshoot</a></p>
+    </section>
+    <h2 class="stage-h">Kubernetes</h2>
+    <section class="card problem" id="k8s-progress-deadline">
+      <h3>deployment exceeded its progress deadline</h3>
+      <pre class="err-line"><code>error: deployment &quot;api&quot; exceeded its progress deadline</code></pre>
+      <h4>Symptom</h4>
+      <p><code>kubectl rollout status</code> fails after several minutes; new pods crash or never become ready while some old ones keep serving.</p>
+      <h4>Why it happens</h4>
+      <p>The Deployment did not make progress within <code>progressDeadlineSeconds</code> (600 by default). Kubernetes marks it failed but does not roll back on its own.</p>
+      <ul>
+        <li>The new image crashes on start (CrashLoopBackOff) or fails its readiness probe</li>
+        <li>The image cannot be pulled (ImagePullBackOff)</li>
+        <li>Not enough CPU or memory to schedule the new pods</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>kubectl rollout status deployment/&lt;name&gt; --timeout=10s
+kubectl get pods -l &lt;selector&gt;
+kubectl describe pod &lt;new-pod&gt; | tail -20
+kubectl logs &lt;new-pod&gt; --previous</code></pre>
+      <h4>Fix</h4>
+      <p>Roll back with <code>kubectl rollout undo deployment/&lt;name&gt;</code> and confirm with <code>rollout status</code>. Then fix the image or the probe and release again.</p>
+      <h4>Prevent</h4>
+      <p>Make the deploy script undo automatically when <code>rollout status --timeout</code> fails, and fail the job (scripts/k8s_rollout.sh).</p>
+      <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/rollundo">A failed rollout left running</a>, then take <a href="index.html#path">Level 20 · Kubernetes operations</a>. <a href="index.html#fix/k8s-progress-deadline">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="k8s-drain-pdb">
+      <h3>Cannot evict pod: it would violate the disruption budget</h3>
+      <pre class="err-line"><code>error when evicting pods/&quot;api-7c9d8b6f5-x2lq4&quot; -n &quot;shop&quot; (will retry after 5s): Cannot evict pod as it would violate the pod's disruption budget.</code></pre>
+      <h4>Symptom</h4>
+      <p><code>kubectl drain</code> retries the same pod forever, or until <code>--timeout</code>.</p>
+      <h4>Why it happens</h4>
+      <p>Eviction respects PodDisruptionBudgets. Removing this pod now would leave fewer healthy pods than the budget allows, so the API refuses.</p>
+      <ul>
+        <li>A PDB with <code>minAvailable</code> equal to the replica count, or <code>maxUnavailable: 0</code></li>
+        <li>Other replicas are not ready, so the budget is already used up</li>
+        <li>All replicas run on the node being drained</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>kubectl get pdb -A
+kubectl get pods -n &lt;ns&gt; -l &lt;selector&gt; -o wide</code></pre>
+      <h4>Fix</h4>
+      <p>Wait for the other replicas to become ready, or scale the Deployment up first so the budget allows one eviction. Do not bypass it with <code>--disable-eviction</code>.</p>
+      <h4>Prevent</h4>
+      <p>Run at least two replicas spread across nodes, and set budgets that allow one disruption (<code>maxUnavailable: 1</code>).</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 20 · Kubernetes operations</a>. <a href="index.html#fix/k8s-drain-pdb">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="k8s-drain-local-storage">
+      <h3>cannot delete Pods with local storage</h3>
+      <pre class="err-line"><code>error: unable to drain node &quot;ip-10-0-3-17&quot;: cannot delete Pods with local storage (use --delete-emptydir-data to override): shop/cache-0</code></pre>
+      <h4>Symptom</h4>
+      <p>Drain stops before evicting anything and names pods with emptyDir volumes.</p>
+      <h4>Why it happens</h4>
+      <p>Evicting a pod deletes its emptyDir volume. kubectl will not throw that data away unless you say so.</p>
+      <ul>
+        <li>Caches, scratch space or buffers kept in emptyDir</li>
+        <li>Data that should be on a PersistentVolume is in emptyDir</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>kubectl get pod &lt;pod&gt; -n &lt;ns&gt; -o jsonpath='{.spec.volumes}'</code></pre>
+      <h4>Fix</h4>
+      <p>If the data is disposable, drain with <code>--delete-emptydir-data</code> (<code>-e</code> in scripts/k8s_node_drain.sh). If it is not, move it to a PersistentVolume first.</p>
+      <h4>Prevent</h4>
+      <p>Keep anything you need to keep out of emptyDir.</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 20 · Kubernetes operations</a>. <a href="index.html#fix/k8s-drain-local-storage">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="k8s-drain-no-controller">
+      <h3>cannot delete Pods declare no controller</h3>
+      <pre class="err-line"><code>error: unable to drain node &quot;ip-10-0-3-17&quot;: cannot delete Pods declare no controller (use --force to override): default/debug-shell</code></pre>
+      <h4>Symptom</h4>
+      <p>Drain refuses to start because of a bare pod.</p>
+      <h4>Why it happens</h4>
+      <p>The pod is not managed by a Deployment, StatefulSet, Job or DaemonSet. Once evicted, nothing recreates it.</p>
+      <ul>
+        <li>A debug pod started with <code>kubectl run</code></li>
+        <li>A pod created from a manifest without a controller</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>kubectl get pod &lt;pod&gt; -n &lt;ns&gt; -o jsonpath='{.metadata.ownerReferences}'</code></pre>
+      <h4>Fix</h4>
+      <p>Find who owns it. Delete it yourself if it is a leftover, or recreate it under a controller. <code>--force</code> deletes it for good.</p>
+      <h4>Prevent</h4>
+      <p>Run workloads only through controllers, and clean up debug pods.</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 20 · Kubernetes operations</a>. <a href="index.html#fix/k8s-drain-no-controller">Open in Troubleshoot</a></p>
+    </section>
+    <h2 class="stage-h">Fleet and drift</h2>
+    <section class="card problem" id="ssh-host-key-verification">
+      <h3>Host key verification failed</h3>
+      <pre class="err-line"><code>Host key verification failed.</code></pre>
+      <h4>Symptom</h4>
+      <p>A loop over hosts fails on new or rebuilt servers, or hangs on <code>Are you sure you want to continue connecting (yes/no)?</code> when run by hand.</p>
+      <h4>Why it happens</h4>
+      <p>ssh does not know the host's key (or the key changed), and in BatchMode it will not ask, so it refuses to connect.</p>
+      <ul>
+        <li>A new host not yet in <code>known_hosts</code></li>
+        <li>A rebuilt host with a new key</li>
+        <li>A different user (cron, CI) with its own empty <code>known_hosts</code></li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>ssh-keygen -F &lt;host&gt;
+ssh-keyscan &lt;host&gt; 2&gt;/dev/null | ssh-keygen -lf -</code></pre>
+      <h4>Fix</h4>
+      <p>Check the key's fingerprint against the host (console, cloud API or your inventory), then add it: <code>ssh-keyscan &lt;host&gt; &gt;&gt; ~/.ssh/known_hosts</code>, or remove a stale one with <code>ssh-keygen -R &lt;host&gt;</code>.</p>
+      <h4>Prevent</h4>
+      <p>Distribute host keys from your inventory or use SSH certificates. Never set <code>StrictHostKeyChecking=no</code> to make a loop pass: that accepts any server, including an attacker's.</p>
+      <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/sshloop">ssh eats the loop's input</a>, then take <a href="index.html#path">Level 21 · Fleet operations and drift</a>. <a href="index.html#fix/ssh-host-key-verification">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="ssh-publickey-denied">
+      <h3>Permission denied (publickey)</h3>
+      <pre class="err-line"><code>deploy@web-02: Permission denied (publickey).</code></pre>
+      <h4>Symptom</h4>
+      <p>Some hosts in a fleet run fail at once; others work.</p>
+      <h4>Why it happens</h4>
+      <p>The server accepted none of the keys ssh offered for that user.</p>
+      <ul>
+        <li>The key is not in that host's <code>authorized_keys</code> for this user</li>
+        <li>Cron or CI runs without your ssh agent or key file</li>
+        <li>Wrong user name for that host</li>
+        <li><code>authorized_keys</code> or <code>~/.ssh</code> has permissions sshd rejects</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>ssh -v -o BatchMode=yes &lt;user&gt;@&lt;host&gt; true 2&gt;&amp;1 | grep -E 'Offering|Authentications'
+ssh-add -l</code></pre>
+      <h4>Fix</h4>
+      <p>Add the job's public key to the host for the right user, or point ssh at the key with <code>-i</code> in the job. Fix permissions: <code>chmod 700 ~/.ssh; chmod 600 ~/.ssh/authorized_keys</code>.</p>
+      <h4>Prevent</h4>
+      <p>Use one deploy identity managed by configuration management, and test new hosts in the inventory before they join the fleet.</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 21 · Fleet operations and drift</a>. <a href="index.html#fix/ssh-publickey-denied">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="nginx-emerg">
+      <h3>nginx: [emerg] ... configuration file test failed</h3>
+      <pre class="err-line"><code>nginx: [emerg] unknown directive &quot;proxy_passs&quot; in /etc/nginx/sites-enabled/shop:12</code></pre>
+      <h4>Symptom</h4>
+      <p>A reload changes nothing, or a restart takes the site down, after a config change.</p>
+      <h4>Why it happens</h4>
+      <p>nginx could not parse its configuration. A reload keeps the old workers running; a restart stops them and cannot start new ones.</p>
+      <ul>
+        <li>A typo or a missing semicolon</li>
+        <li>An include that points to a missing file or certificate</li>
+        <li>A directive from a module that is not loaded</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>sudo nginx -t
+sudo nginx -T | sed -n '1,40p'
+journalctl -u nginx -n 30</code></pre>
+      <h4>Fix</h4>
+      <p>Fix the line <code>nginx -t</code> names, run <code>nginx -t</code> again, then reload (not restart) and check the site answers.</p>
+      <h4>Prevent</h4>
+      <p>Deploy config with a test-then-reload step (scripts/nginx_safe_reload.sh) and never with <code>systemctl restart nginx</code>.</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 21 · Fleet operations and drift</a>. <a href="index.html#fix/nginx-emerg">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="terraform-exit-2">
+      <h3>terraform plan -detailed-exitcode exits 2</h3>
+      <pre class="err-line"><code>Error: Process completed with exit code 2.</code></pre>
+      <h4>Symptom</h4>
+      <p>A drift check or CI job using <code>-detailed-exitcode</code> fails, or pages on-call, whenever there are changes, though Terraform itself worked.</p>
+      <h4>Why it happens</h4>
+      <p>With <code>-detailed-exitcode</code>, plan exits 0 for no changes, 2 for changes and 1 for an error. <code>set -e</code>, <code>if</code> and CI treat 2 as a failure like 1.</p>
+      <ul>
+        <li>The status is not captured, so <code>set -e</code> stops the script on 2</li>
+        <li><code>if terraform plan ...; then</code> sends drift to the error branch</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>terraform plan -detailed-exitcode -input=false &gt; /dev/null; echo $?</code></pre>
+      <h4>Fix</h4>
+      <p>Capture the status and branch on it: <code>rc=0; terraform plan -detailed-exitcode ... || rc=$?; case $rc in 0) ...;; 2) ...;; *) ...;; esac</code>.</p>
+      <h4>Prevent</h4>
+      <p>Treat any multi-valued status (terraform, grep, diff) with <code>|| rc=$?</code> and <code>case</code>. scripts/terraform_drift_check.sh reports 0, 1 drift and 2 error.</p>
+      <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/tfdrift">Drift pages on-call as an outage</a>, then take <a href="index.html#path">Level 21 · Fleet operations and drift</a>. <a href="index.html#fix/terraform-exit-2">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="terraform-state-lock">
+      <h3>Error acquiring the state lock</h3>
+      <pre class="err-line"><code>Error: Error acquiring the state lock</code></pre>
+      <h4>Symptom</h4>
+      <p>A plan or apply fails at once, naming a lock ID, who holds it and when it was taken.</p>
+      <h4>Why it happens</h4>
+      <p>Another Terraform run holds the state lock (or a crashed run left it behind). Terraform will not read or write state while it is held.</p>
+      <ul>
+        <li>Someone is applying right now</li>
+        <li>A drift check or CI plan takes the lock while it runs</li>
+        <li>A run was killed and left a stale lock</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>terraform plan -lock-timeout=60s
+aws dynamodb get-item --table-name &lt;lock-table&gt; --key '{&quot;LockID&quot;:{&quot;S&quot;:&quot;&lt;bucket&gt;/&lt;key&gt;-md5&quot;}}'</code></pre>
+      <h4>Fix</h4>
+      <p>Wait, or use <code>-lock-timeout</code>. Remove a lock with <code>terraform force-unlock &lt;ID&gt;</code> only after you know its run is dead.</p>
+      <h4>Prevent</h4>
+      <p>Read-only checks such as drift detection can plan with <code>-lock=false</code> so they never block an apply; applies keep the lock.</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 21 · Fleet operations and drift</a>. <a href="index.html#fix/terraform-state-lock">Open in Troubleshoot</a></p>
+    </section>
+    <h2 class="stage-h">Personal data</h2>
+    <section class="card problem" id="personal-data-in-logs">
+      <h3>Personal data found in application logs</h3>
+      <pre class="err-line"><code>/var/log/shop/app.log:1042: Aadhaar (…46)</code></pre>
+      <h4>Symptom</h4>
+      <p>A scan, an audit or a customer complaint finds e-mail addresses, phone numbers, PAN or Aadhaar numbers in logs that many people and systems can read.</p>
+      <h4>Why it happens</h4>
+      <p>The application logs whole requests, objects or error messages that contain personal data. Every copy of those logs (log platform, backups, tickets) now holds it too.</p>
+      <ul>
+        <li>Logging request bodies or query strings</li>
+        <li><code>print(user)</code> or a debug log level left on in production</li>
+        <li>Exceptions that include the input value</li>
+        <li>Access logs with personal data in URLs (<code>/users/priya@example.com</code>)</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>./scripts/pii_scan.sh -c /var/log/shop
+grep -c 'email=' /var/log/shop/app.log</code></pre>
+      <h4>Fix</h4>
+      <p>Stop it at the source: log ids and events instead of values. Mask what you cannot change on the way out (<code>app | scripts/pii_redact.sh</code>), redact or expire the existing files and copies, and record what was exposed in case it counts as a breach.</p>
+      <h4>Prevent</h4>
+      <p>Run scripts/pii_scan.sh in CI on test logs and fixtures, review log statements like code, and keep log retention short.</p>
+      <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/piilog">Customers' details in the log</a>, then take <a href="index.html#path">Level 22 · Personal data in logs and files (DPDP)</a>. <a href="index.html#fix/personal-data-in-logs">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="test-data-from-production">
+      <h3>Production personal data in a test environment</h3>
+      <pre class="err-line"><code>fixtures/customers.csv: Mobile 12000, Email 12000</code></pre>
+      <h4>Symptom</h4>
+      <p>A staging database, a fixture file or a laptop holds a copy of real customers' data.</p>
+      <h4>Why it happens</h4>
+      <p>The data was collected for running the service, not for testing; test systems usually have weaker access control, more users and no retention. That breaks purpose limitation and multiplies the places a breach can happen.</p>
+      <ul>
+        <li>Restoring a production dump into staging to reproduce a bug</li>
+        <li>Exporting a few real rows as fixtures</li>
+        <li>Sharing a dump with a vendor or a contractor</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>./scripts/pii_scan.sh -c fixtures/ testdata/
+psql -h staging -Atc 'select count(*) from customers where email not like ''%@example.%'''</code></pre>
+      <h4>Fix</h4>
+      <p>Delete the copies, and replace them with synthetic data (generated names, <code>@example.com</code> addresses, numbers that fail the Aadhaar checksum) or a masked extract made inside production's controls.</p>
+      <h4>Prevent</h4>
+      <p>Make masked or synthetic data the only way into non-production, and scan fixtures in CI.</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 22 · Personal data in logs and files (DPDP)</a>. <a href="index.html#fix/test-data-from-production">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="unencrypted-backups">
+      <h3>Database backups readable by anyone on the host</h3>
+      <pre class="err-line"><code>-rw-r--r-- 1 postgres postgres 2.1G Oct 31 02:00 /var/backups/shop-20261031.sql.gz</code></pre>
+      <h4>Symptom</h4>
+      <p>Backup files are world-readable, unencrypted, or copied to a bucket without encryption or with public access.</p>
+      <h4>Why it happens</h4>
+      <p>A backup holds every row of the database. Whoever can read it has all the personal data, without any of the application's access controls.</p>
+      <ul>
+        <li>The default umask 022 creates files as 644</li>
+        <li>Uploads without <code>--sse</code>, or a bucket with no default encryption</li>
+        <li>Old backups never deleted, so years of data sit in one place</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>ls -l /var/backups/
+aws s3api get-bucket-encryption --bucket &lt;bucket&gt;
+aws s3api get-public-access-block --bucket &lt;bucket&gt;</code></pre>
+      <h4>Fix</h4>
+      <p><code>chmod 600</code> the files (and <code>umask 077</code> in the backup job), encrypt off-site copies (SSE-KMS or client-side), block public access on the bucket, and delete backups beyond the retention period.</p>
+      <h4>Prevent</h4>
+      <p>Use backup scripts that set <code>umask 077</code>, encrypt uploads and rotate (scripts/pg_backup.sh, scripts/mysql_backup.sh, scripts/s3_backup_sync.sh).</p>
+      <p class="note"><strong>Now learn it:</strong> take <a href="index.html#path">Level 23 · Retention, erasure and breach response (DPDP)</a>. <a href="index.html#fix/unencrypted-backups">Open in Troubleshoot</a></p>
+    </section>
+    <section class="card problem" id="no-retention-limit">
+      <h3>Personal data kept with no retention limit</h3>
+      <pre class="err-line"><code>find /srv/exports -name '*.csv' -mtime +365 | wc -l  →  48211</code></pre>
+      <h4>Symptom</h4>
+      <p>Exports, reports, uploads or logs with personal data go back years, long after anyone needs them.</p>
+      <h4>Why it happens</h4>
+      <p>Nothing deletes them. Storage limitation means erasing personal data once its purpose is served or consent is withdrawn, unless a law requires keeping it; old files are pure risk.</p>
+      <ul>
+        <li>Export jobs that write files but no job that removes them</li>
+        <li>Log retention left at &quot;forever&quot; on the log platform</li>
+        <li>Fear of deleting the wrong thing</li>
+      </ul>
+      <h4>Confirm</h4>
+      <pre><code>./scripts/retention_cleanup.sh -d 365 -p '*.csv' /srv/exports      # dry run
+du -sh /srv/exports</code></pre>
+      <h4>Fix</h4>
+      <p>Agree a retention period per data set, run the clean-up as a dry run, review it, then schedule it with <code>-y</code> and a deletion log.</p>
+      <h4>Prevent</h4>
+      <p>Every job that creates personal-data files gets a retention job at the same time (scripts/retention_cleanup.sh), and log platforms get a retention setting.</p>
+      <p class="note"><strong>Now learn it:</strong> break and fix it yourself in <a href="index.html#play/logrotate">Log cleanup deletes the wrong files</a>, then take <a href="index.html#path">Level 23 · Retention, erasure and breach response (DPDP)</a>. <a href="index.html#fix/no-retention-limit">Open in Troubleshoot</a></p>
     </section>
   </main>
   <footer class="foot">
