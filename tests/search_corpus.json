@@ -282,7 +282,7 @@
    "expect": "s3-sync-delete"
   },
   {
-   "text": "pg_dump: error: aborting because of server version mismatch\npg_dump: detail: server version: 16.4; pg_dump version: 14.13",
+   "text": "pg_dump: error: aborting because of server version mismatch\npg_dump: detail: server version: 16.4; pg_dump version: 15.8",
    "expect": "pg-dump-version-mismatch"
   },
   {

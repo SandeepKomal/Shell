@@ -25,17 +25,20 @@ function build() {
       return `    <section class="card problem" id="${d.id}">
       <h3>${esc(d.title)}</h3>
       <pre class="err-line"><code>${esc(d.error)}</code></pre>
-      <h4>Symptom</h4>
-      <p>${rich(d.symptom)}</p>
-      <h4>Why it happens</h4>
+      <h4>What it means</h4>
       <p>${rich(d.meaning)}</p>
-      <ul>
-${d.causes.map((c) => `        <li>${rich(c)}</li>`).join("\n")}
-      </ul>
-      <h4>Confirm</h4>
-      <pre><code>${esc(d.confirm.join("\n"))}</code></pre>
-      <h4>Fix</h4>
-      <p>${rich(d.fix)}</p>
+      <h4>What you see</h4>
+      <p>${rich(d.symptom)}</p>
+      <h4>${d.causes.length > 1 ? "Causes, most likely first" : "Cause"}</h4>
+      <ol class="causes">
+${d.causes.map((c) => `        <li class="cause">
+          <p class="cause-why">${rich(c.why)}</p>
+          <p class="cause-label">Check</p>
+          <pre><code>${esc(c.check.join("\n"))}</code></pre>
+          <p class="cause-label">Fix</p>
+          <p>${rich(c.fix)}</p>
+        </li>`).join("\n")}
+      </ol>
       <h4>Prevent</h4>
       <p>${rich(d.prevent)}</p>
       <p class="note"><strong>Now learn it:</strong> ${practise ? `break and fix it yourself in ${practise}, then take` : "take"} <a href="index.html#path">Level ${lv.id} · ${esc(lv.title)}</a>. <a href="index.html#fix/${d.id}">Open in Troubleshoot</a></p>
@@ -50,10 +53,10 @@ ${d.causes.map((c) => `        <li>${rich(c)}</li>`).join("\n")}
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
-  <meta name="description" content="Every common bash error explained: what it means, why it happens, how to confirm it, how to fix it and how to prevent it. ${Q.doctor.length} entries, from command not found to unbound variable.">
+  <meta name="description" content="Every common bash error explained: what it means, each cause that prints it, the check that tells them apart, the fix for that cause and how to prevent it. ${Q.doctor.length} entries, from command not found to unbound variable.">
   <meta property="og:type" content="article">
   <meta property="og:title" content="Bash errors, explained">
-  <meta property="og:description" content="Symptom, cause, confirm, fix and prevent for ${Q.doctor.length} common bash errors.">
+  <meta property="og:description" content="Meaning, causes, checks, fixes and prevention for ${Q.doctor.length} common bash errors.">
   <meta property="og:url" content="${Q.site}problems.html">
   <link rel="canonical" href="${Q.site}problems.html">
   <title>Bash errors explained</title>
@@ -68,7 +71,7 @@ ${d.causes.map((c) => `        <li>${rich(c)}</li>`).join("\n")}
   </header>
   <main class="wrap">
     <h1 class="big-title">Bash errors, explained</h1>
-    <p class="lede">What each error means, why it happens, the commands that confirm the cause, the fix and how to prevent it. Then learn it for good: break and fix each one yourself in the <a href="index.html#pg-title">browser playground</a>, or search them in <a href="index.html#doctor">Troubleshoot</a>.</p>
+    <p class="lede">What each error means, the causes that print it, a check that tells you which one you have, the fix for that cause and how to prevent it. Then learn it for good: break and fix each one yourself in the <a href="index.html#pg-title">browser playground</a>, or search them in <a href="index.html#doctor">Troubleshoot</a>.</p>
     <ul class="note">
 ${toc}
     </ul>
