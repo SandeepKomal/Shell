@@ -68,14 +68,23 @@ for (const lv of Q.levels) {
 }
 
 // Troubleshoot: reference-style entries with stable links
-const keys = ["id", "title", "error", "group", "level", "symptom", "meaning", "causes", "confirm", "fix", "prevent", "scenarios"];
+const keys = ["id", "title", "error", "group", "level", "symptom", "meaning", "causes", "prevent", "scenarios"];
 for (const d of Q.doctor) {
   for (const k of keys) assert.ok(d[k] !== undefined && d[k] !== "", `doctor ${d.id}: ${k}`);
   assert.match(d.id, /^[a-z0-9-]+$/, `doctor ${d.id}: link-safe id`);
-  assert.ok(d.causes.length && d.confirm.length, `doctor ${d.id}: causes and confirm commands`);
+  assert.ok(Array.isArray(d.causes) && d.causes.length, `doctor ${d.id}: at least one cause`);
+  for (const k of ["confirm", "fix"]) assert.strictEqual(d[k], undefined, `doctor ${d.id}: ${k} belongs inside each cause`);
+  d.causes.forEach((c, i) => {
+    const where = `doctor ${d.id}: cause ${i + 1}`;
+    assert.deepStrictEqual(Object.keys(c).sort(), ["check", "fix", "why"], `${where}: why, check and fix`);
+    assert.ok(typeof c.why === "string" && c.why.length > 10, `${where}: why`);
+    assert.ok(typeof c.fix === "string" && c.fix.length > 5, `${where}: fix`);
+    assert.ok(Array.isArray(c.check) && c.check.length && c.check.every((x) => typeof x === "string" && x.trim()), `${where}: check commands`);
+    for (const x of c.check) assert.match(x, /\s#\s\S/, `${where}: every check says what to look for (# ...): ${x}`);
+  });
   assert.ok(Q.levels.some((l) => l.id === d.level), `doctor ${d.id}: level exists`);
   for (const s of d.scenarios) assert.ok(ids.has(s), `doctor ${d.id}: scenario ${s} exists`);
-  for (const t of [d.symptom, d.meaning, d.fix, d.prevent, ...d.causes]) ticks(t, `doctor ${d.id}`);
+  for (const t of [d.symptom, d.meaning, d.prevent, ...d.causes.flatMap((c) => [c.why, c.fix])]) ticks(t, `doctor ${d.id}`);
 }
 assert.ok(Q.doctor.length >= 30, "at least 30 Troubleshoot entries");
 assert.strictEqual(new Set(Q.doctor.map((d) => d.id)).size, Q.doctor.length, "Troubleshoot links are unique");

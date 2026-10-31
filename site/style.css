@@ -708,3 +708,15 @@ main:has(.pg-scenarios:empty) #pg-out:empty { background-image: repeating-linear
 :is(.door, .tile, .stage-card):nth-child(4) { --i: 3; } :is(.door, .tile, .stage-card):nth-child(5) { --i: 4; }
 :is(.door, .tile, .stage-card):nth-child(6) { --i: 5; } :is(.door, .tile, .stage-card):nth-child(7) { --i: 6; }
 @media (prefers-reduced-motion: reduce) { .door::before, .tile::before, .stage-card::before { display: none; } }
+
+/* Troubleshoot: each cause with its own check and fix */
+.problem ol.causes { list-style: none; counter-reset: cause; margin: 0; padding: 0; display: grid; gap: 12px; }
+.problem li.cause { counter-increment: cause; position: relative; padding: 14px 16px 16px 46px; border: 1px solid var(--hair); border-radius: var(--radius-sm); background: var(--surface); }
+.problem li.cause::before { content: counter(cause); position: absolute; left: 14px; top: 13px; width: 22px; height: 22px; border-radius: 50%; background: var(--code-bg); color: var(--muted); font-size: .78rem; font-weight: 600; line-height: 22px; text-align: center; }
+.problem .cause-why { margin: 0 0 4px; }
+.problem .cause-label { margin: 12px 0 6px; font-size: .78rem; font-weight: 600; color: var(--muted); }
+.problem li.cause pre { padding: 10px 12px; font-size: .84rem; }
+@media (max-width: 560px) {
+  .problem li.cause { padding: 12px 12px 14px 40px; }
+  .problem li.cause::before { left: 10px; top: 11px; }
+}

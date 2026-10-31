@@ -51,7 +51,7 @@
   };
   const fullCache = new WeakMap();
   const full = (d) => {
-    if (!fullCache.has(d)) fullCache.set(d, [...new Set(norm([d.id, d.title, d.error, d.group, d.symptom, d.meaning, ...d.causes].join(" ")).split(/[^a-z0-9_$\\^-]+/))]);
+    if (!fullCache.has(d)) fullCache.set(d, [...new Set(norm([d.id, d.title, d.error, d.group, d.symptom, d.meaning, ...d.causes.map((c) => c.why)].join(" ")).split(/[^a-z0-9_$\\^-]+/))]);
     return fullCache.get(d);
   };
   const shared = (d, q) => q.filter((w) => head(d).has(w)).length;
