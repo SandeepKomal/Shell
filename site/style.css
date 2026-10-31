@@ -410,11 +410,14 @@ select:focus, input[type="search"]:focus { border-color: var(--accent); outline:
 .pg-file .acts { display: flex; gap: 6px; flex: none; }
 .pg-try { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 /* Held open until the playground script fills them, so the page below does not move. */
-.pg-check:empty { min-height: 77px; }
+.pg-check:empty { min-height: 102px; }
 .pg-files:empty { min-height: 87px; }
-.pg-try:empty { min-height: 32px; }
+.pg-try:empty { min-height: 72px; }
 .arch:empty { min-height: 480px; }
-@media (max-width: 480px) { .pg-check:empty { min-height: 99px; } .pg-files:empty { min-height: 95px; } .pg-try:empty { min-height: 72px; } }
+@media (max-width: 960px) { .pg-check:empty { min-height: 77px; } .pg-try:empty { min-height: 32px; } }
+@media (max-width: 760px) { .pg-check:empty { min-height: 76px; } .pg-files:empty { min-height: 95px; } }
+@media (max-width: 550px) { .pg-try:empty { min-height: 72px; } }
+@media (max-width: 435px) { .pg-check:empty { min-height: 99px; } }
 .pg-try .chip { font-family: var(--mono); font-size: .76rem; padding: 6px 12px; }
 @media (prefers-color-scheme: dark) {
   .pg-check .dot { color: #000; }
@@ -653,3 +656,24 @@ select:focus, input[type="search"]:focus { border-color: var(--accent); outline:
 @media (prefers-reduced-motion: reduce) { .brand-back { transition: none; } }
 /* Narrow phones: the logo stands for DevOps Nimbus so the header keeps one row. */
 @media (max-width: 440px) { .brand-hub > span:not([class]) { display: none; } }
+
+/* While a feature's code is still arriving, its space shows calm grey lines in the shape it will
+   fill, and the first screen fades in once as one piece. Both stop for reduced motion. */
+.pg-try:empty, #pg-out:empty, #arch:empty, #quiz-list:empty {
+  border-radius: var(--radius-sm);
+  background: repeating-linear-gradient(to bottom, var(--code-bg) 0 12px, transparent 12px 28px) 0 0 / 100% 100% no-repeat;
+}
+.pg-check:empty, .pg-files:empty { background: var(--surface) repeating-linear-gradient(to bottom, var(--code-bg) 0 12px, transparent 12px 28px) 0 0 / 70% 100% no-repeat; background-origin: content-box; }
+.pg-check:empty, .pg-files:empty, .pg-try:empty, #pg-out:empty, #arch:empty, #quiz-list:empty { animation: nimbus-skel 1.6s ease-in-out infinite alternate; }
+#pg-out:empty { background-image: repeating-linear-gradient(to bottom, color-mix(in srgb, #fff 9%, transparent) 0 10px, transparent 10px 24px); background-size: 70% 82px; background-origin: content-box; background-clip: content-box; }
+#quiz-list:empty { min-height: 320px; }
+#arch:empty { min-height: 1594px; border-radius: 0; background: repeating-linear-gradient(to bottom, var(--code-bg) 0 12px, transparent 12px 40px) 104px 160px / min(560px, calc(100% - 104px)) calc(100% - 160px) no-repeat; }
+#arch:empty::before { content: ""; display: block; height: 42px; border-radius: var(--radius-sm); background: var(--code-bg); }
+@media (max-width: 720px) { #arch:empty { background-position: 56px 160px; background-size: calc(100% - 56px) calc(100% - 160px); } }
+@keyframes nimbus-skel { from { opacity: .5; } to { opacity: 1; } }
+#stage-code:not(:empty), #stats:not(:empty), #engage:not(:empty), #bento:not(:empty), #stages:not(:empty), #levels:not(:empty) { animation: nimbus-fade .2s ease-out both; }
+@keyframes nimbus-fade { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) {
+  .pg-check:empty, .pg-files:empty, .pg-try:empty, #pg-out:empty, #arch:empty, #quiz-list:empty { animation: none; }
+  #stage-code:not(:empty), #stats:not(:empty), #engage:not(:empty), #bento:not(:empty), #stages:not(:empty), #levels:not(:empty) { animation: none; }
+}
