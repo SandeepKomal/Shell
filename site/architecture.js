@@ -6,7 +6,7 @@
 (function () {
   const { h, rich } = window.SQUI;
   const S = window.ShellSim;
-  const steps = window.QUEST.architecture;
+  const steps = window.TRACK.architecture;
   const root = document.getElementById("arch");
   const EXAMPLES = ['cp $SRC ~/backup/{a,b}.txt > log 2>&1', 'echo "Files: $(ls *.log | wc -l)" $((2 ** 8))', 'grep -c ERROR app.log | tee count.txt', 'NAME=web ./deploy.sh "$@"'];
 

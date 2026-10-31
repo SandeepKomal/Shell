@@ -1,7 +1,7 @@
-// Content for the Shell Quest site. Plain data, no logic.
+// Content for the DevOps Nimbus Bash and shell site. Plain data, no logic.
 "use strict";
 
-window.QUEST = {
+window.TRACK = {
   repo: "https://github.com/SandeepKomal/Shell",
   site: "https://sandeepkomal.github.io/Shell/",
 

@@ -10,8 +10,8 @@ const assert = require("assert");
 const root = path.resolve(__dirname, "..");
 global.window = {};
 for (const f of ["data", "quiz-bank", "bash", "builtins", "coreutils", "scenarios", "xray", "search"]) require(path.join(root, `site/${f}.js`));
-const Q = window.QUEST;
-const quiz = window.QUEST_QUIZ;
+const Q = window.TRACK;
+const quiz = window.TRACK_QUIZ;
 const { SCENARIOS, start } = window.ShellScenarios;
 const ids = new Set(SCENARIOS.map((s) => s.id));
 const ticks = (text, where) => assert.strictEqual((text.match(/`/g) || []).length % 2, 0, `${where}: unbalanced backticks in "${text}"`);
@@ -141,7 +141,7 @@ for (const [name, page] of [["index.html", html], ["problems.html", problems]]) 
   assert.match(page, /Bash is a GNU project of the Free Software Foundation\. This project is independent and not affiliated with the FSF or the GNU project\./, `${name}: trademark line`);
 }
 for (const src of html.match(/(src|href)="[^"#:]+"/g)) assert.ok(fs.existsSync(path.join(root, "site", src.split('"')[1])), `${src} exists`);
-assert.match(html, /<title>Shell Quest<\/title>/);
+assert.match(html, /<title>Bash and shell · DevOps Nimbus<\/title>/);
 assert.ok(html.includes(`${SCENARIOS.length} incidents in a bash playground`), "the meta description has the real scenario count");
 assert.match(html, /© 2024–2026 Sandeep Komal Pothu and contributors\./);
 assert.match(html, /id="forget"/, "a Clear it button");

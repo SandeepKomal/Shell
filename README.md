@@ -4,9 +4,9 @@ A collection of reusable **Bash scripts for Linux administration, DevOps, cloud,
 
 The goal is simple: provide small scripts that solve common day-to-day operational problems and are easy to understand, modify, and automate with cron or CI/CD.
 
-## Shell Quest: the learning site
+## DevOps Nimbus Bash and shell: the learning site
 
-[Shell Quest](https://sandeepkomal.github.io/Shell/) teaches bash scripting by fixing scripts that break the way real ones do. It is free, needs no account and sends nothing anywhere.
+[DevOps Nimbus Bash and shell](https://sandeepkomal.github.io/Shell/) teaches bash scripting by fixing scripts that break the way real ones do. It is free, needs no account and sends nothing anywhere.
 
 - **Playground**: a bash shell over a small simulated server, with incidents from quoting and exit codes to cron, background jobs, locks, retries and secrets. Run the script, read the real error, edit it, run it again.
 - **Path**: levels from a first script to production incidents, each with a lab that uses the scripts in this repository.
@@ -38,7 +38,7 @@ Shell/
 ├── Service Health Check/
 ├── System Uptime Check/
 ├── Automatic Package Updates/
-├── site/                 # Shell Quest, the learning site (GitHub Pages)
+├── site/                 # DevOps Nimbus Bash and shell, the learning site (GitHub Pages)
 ├── tools/                # build_problems.js for site/problems.html
 ├── tests/                # test_scripts.sh and the site's node tests
 ├── scripts/

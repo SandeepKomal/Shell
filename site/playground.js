@@ -148,6 +148,7 @@
     if (renderCheck() && !won) {
       won = true;
       solved.add(scenario.id);
+      document.dispatchEvent(new CustomEvent("dq:solved", { detail: scenario.id }));
       renderPicker();
       const b = picker.querySelector('.pg-scn[aria-pressed="true"]');
       if (b) b.classList.add("just-solved");
@@ -228,7 +229,7 @@
 
   const reveal = () => { $("#pg-term").scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); input.focus({ preventScroll: true }); };
   window.SQPlayground = {
-    scenarios: SCENARIOS.map((s) => ({ id: s.id, title: s.title, group: s.group })),
+    scenarios: SCENARIOS.map((s) => ({ id: s.id, title: s.title, group: s.group, story: s.story, level: s.level })),
     load: (id) => { if (id !== scenario.id || !sys) load(id); reveal(); },
     // From the cheat sheet: open the scenario a command needs and run it there.
     prefill: (cmd, where) => {

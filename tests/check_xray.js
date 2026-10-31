@@ -68,7 +68,7 @@ assert.deepStrictEqual(review("#!/usr/bin/env bash\nset -euo pipefail\necho hi\n
 assert.deepStrictEqual(explain("#!/usr/bin/env bash\nset -euo pipefail\ncat <<'EOF'\nrm -rf $X\nEOF\n").lines[3].warns, []);
 
 // Every line of the example is explained, and its dangerous lines are found.
-const ex = explain(window.QUEST.xrayExample);
+const ex = explain(window.TRACK.xrayExample);
 assert.ok(ex.lines.every((r) => !r.line.trim() || r.note), "every line of the example has a note");
 assert.ok(ex.lines.filter((r) => r.warns.some((w) => w.sev === "bad")).length >= 4, "the example has its dangerous lines flagged");
 

@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Shell Quest">
-  <title>Shell Quest</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Bash and shell">
+  <title>Bash and shell</title>
   <rect x="2" y="2" width="60" height="60" rx="16" fill="#2f7d0f"/>
   <g stroke="#fff" stroke-width="4.5" stroke-linecap="round">
     <path d="M20 17 16 47M31 17 27 47M12 26h23M10 38h23"/>

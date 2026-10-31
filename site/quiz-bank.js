@@ -1,7 +1,7 @@
 // Quiz questions per level: q, optional code, four options, answer (index), why.
 "use strict";
 
-window.QUEST_QUIZ = {
+window.TRACK_QUIZ = {
   "00": [
     { q: "You run `./backup.sh` and get `Permission denied`. `bash backup.sh` works. What is missing?", options: ["The execute bit on the file", "A `#!/bin/bash` line", "sudo", "A `.sh` extension in PATH"], answer: 0,
       why: "Running a file by its path needs the execute permission; `bash file` only needs read permission because bash is the program being run. `chmod +x backup.sh` fixes it." },
