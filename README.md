@@ -12,7 +12,7 @@ The goal is simple: provide small scripts that solve common day-to-day operation
 - **Path**: levels from a first script to production incidents, each with a lab that uses the scripts in this repository.
 - **Script X-ray**: paste a script to see every line explained and risky lines flagged.
 - **Troubleshoot**: every common bash error with its cause, how to confirm it, the fix and how to prevent it; also as one plain page, [problems.html](https://sandeepkomal.github.io/Shell/problems.html).
-- **Quiz**, **Cheat sheet** and **Shell arch** (how bash runs a command line).
+- **Quiz**, **Cheat sheet** and **How bash runs** (how bash runs a command line).
 
 The site is static HTML, CSS and JavaScript in `site/`, published with GitHub Pages. To work on it, open `site/index.html` in a browser or serve the folder (`python3 -m http.server -d site`), and run the tests:
 

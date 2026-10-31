@@ -1,4 +1,4 @@
-// The Shell arch tab: the steps bash takes to run a command line. Type a
+// The "How bash runs" tab: the steps bash takes to run a command line. Type a
 // line and each step shows what it made of it, computed by the playground's
 // own bash in a throwaway copy of the server.
 "use strict";

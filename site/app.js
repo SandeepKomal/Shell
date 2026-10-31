@@ -116,7 +116,7 @@
       ["#pg-title", "Playground", "Run it, break it, fix it.", "A bash shell over a small server, with real error messages and real incidents.", "wide"],
       ["#doctor", "Troubleshoot", "Paste the error.", "Cause, confirm, fix, prevent."],
       ["#quiz", "Quiz", "Read code like a reviewer.", "Predict what bash does."],
-      ["#arch", "Shell arch", "How a line runs.", "Tokens, expansions, fork and exec."],
+      ["#arch", "How bash runs", "How a line runs.", "Tokens, expansions, fork and exec."],
       ["#cheats", "Cheat sheet", "Copy, fill, run.", "The idioms scripts use every day, each one runnable.", "wide"],
       [Q.repo + "/tree/main/scripts", "Scripts", "Tested tools, ready to use.", "Retries, backups, deploys, audits: the repository's scripts, each used in a level.", "wide"]
     ];
