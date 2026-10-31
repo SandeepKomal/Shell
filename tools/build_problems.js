@@ -61,7 +61,9 @@ ${d.causes.map((c) => `        <li class="cause">
   <link rel="canonical" href="${Q.site}problems.html">
   <title>Bash errors explained</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="favicon.ico" sizes="32x32">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
 </head>
 <body>
   <header class="top">
