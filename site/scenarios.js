@@ -1688,6 +1688,196 @@
         if (!/^OK: shop\.pem has 62 days left$/m.test(later.out)) return bad("expires Jan 1", firstLine(later.out) || firstLine(later.err));
         return ok("cert-check.sh", "16 days left");
       }
+    },
+
+    // --- Automation at work ------------------------------------------------------------
+    {
+      id: "s3empty",
+      title: "sync --delete emptied the bucket",
+      level: "18",
+      story: "The backup disk did not mount after a reboot. At 02:00 backup-sync.sh mirrored the empty folder to S3 with --delete, and every backup in the bucket went with it.",
+      goal: "Make backup-sync.sh refuse to sync, and exit non-zero, when /mnt/backups is empty; it must still upload when the disk is there.",
+      done: "An empty source never reaches the bucket.",
+      file: `${H}/backup-sync.sh`,
+      files: {
+        [`${H}/backup-sync.sh`]: `#!/usr/bin/env bash\nset -euo pipefail\nSRC=/mnt/backups\naws s3 sync "$SRC" s3://acme-backups/db --delete\necho "backups mirrored"\n`,
+        "/var/sim/s3/acme-backups/db/shop-20261028.dump": "PGDMP\n",
+        "/var/sim/s3/acme-backups/db/shop-20261029.dump": "PGDMP\n",
+        "/var/sim/s3/acme-backups/db/shop-20261030.dump": "PGDMP\n"
+      },
+      dirs: ["/mnt/backups"],
+      bins: {
+        aws: (c) => {
+          const [svc, verb, src, dest] = c.args;
+          if (svc !== "s3" || verb !== "sync" || !/^s3:\/\//.test(dest || "")) { c.err("aws: this playground only knows: aws s3 sync DIR s3://bucket/prefix [--delete] [--dryrun]\n"); return 252; }
+          const from = c.path(src);
+          if (!c.fs.isDir(from)) { c.err(`warning: Skipping file ${from}/. File does not exist.\n`); return 2; }
+          const bucket = "/var/sim/s3/" + dest.slice(5).replace(/\/$/, "");
+          const dry = c.args.includes("--dryrun") ? "(dryrun) " : "";
+          const local = c.fs.walk(from).filter((p) => c.fs.isFile(p)).map((p) => p.slice(from.length + 1));
+          for (const f of local) { c.out(`${dry}upload: ${src}/${f} to ${dest}/${f}\n`); if (!dry) c.fs.write(`${bucket}/${f}`, c.fs.get(`${from}/${f}`).text); }
+          if (c.args.includes("--delete")) {
+            for (const p of c.fs.walk(bucket).filter((q) => c.fs.isFile(q))) {
+              const f = p.slice(bucket.length + 1);
+              if (!local.includes(f)) { c.out(`${dry}delete: ${dest}/${f}\n`); if (!dry) c.fs.remove(p); }
+            }
+          }
+          return 0;
+        }
+      },
+      hints: [
+        "Look before it runs: aws s3 sync /mnt/backups s3://acme-backups/db --delete --dryrun shows what a run would do. Then ls -A /mnt/backups.",
+        "To aws s3 sync an empty folder is a valid source: with --delete it makes the bucket match it. An unmounted disk looks exactly like that.",
+        "Check the source before syncing: [ -n \"$(ls -A \"$SRC\")\" ] || { echo \"no backups in $SRC: is the disk mounted?\" >&2; exit 1; }. Removing --delete alone still reports success with nothing backed up."
+      ],
+      lesson: "A mirror with --delete trusts its source completely. Check that the source is really there (non-empty, or mountpoint -q) before you let it delete anything, and turn on bucket versioning so a mistake can be undone. scripts/s3_backup_sync.sh does both checks.",
+      tries: ["aws s3 sync /mnt/backups s3://acme-backups/db --delete --dryrun", "ls -A /mnt/backups", "ls /var/sim/s3/acme-backups/db"],
+      check(sys) {
+        const bucket = "/var/sim/s3/acme-backups/db";
+        const count = (r) => r.fs.walk(bucket).filter((p) => r.fs.isFile(p)).length;
+        const empty = trial(this, sys, "./backup-sync.sh");
+        const mounted = trial(this, sys, "./backup-sync.sh", { setup: (t) => t.fs.write("/mnt/backups/shop-20261031.dump", "PGDMP\n") });
+        if (count(empty) < 3) return bad("disk not mounted", `the bucket lost ${3 - count(empty)} backup(s)`);
+        if (empty.status === 0) return bad("disk not mounted", "reports success with nothing backed up");
+        if (mounted.status !== 0 || !mounted.fs.get(`${bucket}/shop-20261031.dump`)) return verdict("disk mounted", mounted, false, "did not upload the new backup");
+        return ok("backup-sync.sh", "refuses an empty source, uploads a real one");
+      }
+    },
+    {
+      id: "rollundo",
+      title: "A failed rollout left running",
+      level: "20",
+      story: "deploy.sh pushed api:1.4.2, which crashes on start. kubectl said the rollout exceeded its deadline, set -e stopped the script, and the half-broken version stayed live until someone woke up.",
+      goal: "When the rollout does not become healthy, roll back to the previous image and exit non-zero. A good release must stay.",
+      done: "Bad releases roll themselves back.",
+      file: `${H}/deploy.sh`,
+      files: {
+        [`${H}/deploy.sh`]: `#!/usr/bin/env bash\n# Usage: deploy.sh VERSION\nset -euo pipefail\nkubectl set image deployment/api api="registry.internal/api:$1"\nkubectl rollout status deployment/api --timeout=2m\necho "deployed $1"\n`,
+        "/var/sim/k8s/api.image": "registry.internal/api:1.4.1\n"
+      },
+      bins: {
+        kubectl: (c) => {
+          const a = c.args.join(" ");
+          const image = () => (c.fs.get("/var/sim/k8s/api.image").text || "").trim();
+          if (/^set image deployment\/api api=/.test(a)) {
+            c.fs.write("/var/sim/k8s/api.prev", image() + "\n");
+            c.fs.write("/var/sim/k8s/api.image", c.args[3].slice(4) + "\n");
+            c.out("deployment.apps/api image updated\n");
+            return 0;
+          }
+          if (/^rollout status deployment\/api/.test(a)) {
+            if (image().endsWith(":1.4.2")) {
+              c.sys.advance(120);
+              c.out('Waiting for deployment "api" rollout to finish: 1 out of 3 new replicas have been updated...\n');
+              c.err('error: deployment "api" exceeded its progress deadline\n');
+              return 1;
+            }
+            c.out('deployment "api" successfully rolled out\n');
+            return 0;
+          }
+          if (/^rollout undo deployment\/api/.test(a)) {
+            const prev = c.fs.get("/var/sim/k8s/api.prev");
+            if (!prev) { c.err('error: no rollout history found for deployment "api"\n'); return 1; }
+            c.fs.write("/var/sim/k8s/api.image", prev.text);
+            c.out("deployment.apps/api rolled back\n");
+            return 0;
+          }
+          if (/^get deployment\/api/.test(a)) { c.out(`${image()}\n`); return 0; }
+          c.err("kubectl: this playground knows set image, rollout status, rollout undo and get deployment/api\n");
+          return 1;
+        }
+      },
+      hints: [
+        "Run ./deploy.sh 1.4.2, then cat /var/sim/k8s/api.image. Which version is live now?",
+        "set -e stops the script at the failed rollout status, but stopping is not undoing: the new ReplicaSet stays.",
+        "Test the rollout and act on failure: if ! kubectl rollout status deployment/api --timeout=2m; then kubectl rollout undo deployment/api; exit 1; fi"
+      ],
+      lesson: "kubectl rollout status exits non-zero when a rollout misses its deadline; that is your cue to run kubectl rollout undo and fail the job. scripts/k8s_rollout.sh does this, and pages a human if the rollback fails too.",
+      tries: ["./deploy.sh 1.4.2", "cat /var/sim/k8s/api.image", "kubectl rollout status deployment/api --timeout=2m"],
+      check(sys) {
+        const live = (r) => (r.text("/var/sim/k8s/api.image") || "").trim();
+        const badRel = trial(this, sys, "./deploy.sh 1.4.2");
+        const good = trial(this, sys, "./deploy.sh 1.4.3");
+        if (live(badRel) !== "registry.internal/api:1.4.1") return bad("bad release 1.4.2", `still running ${live(badRel).split(":").pop()}`);
+        if (badRel.status === 0) return bad("bad release 1.4.2", "rolled back but exits 0, so CI shows green");
+        if (live(good) !== "registry.internal/api:1.4.3" || good.status !== 0) return bad("good release 1.4.3", `running ${live(good).split(":").pop()}, exit ${good.status}`);
+        return ok("deploy.sh", "rolls back a failed rollout, keeps a good one");
+      }
+    },
+    {
+      id: "tfdrift",
+      title: "Drift pages on-call as an outage",
+      level: "21",
+      story: "The nightly drift check pages on-call with \"terraform plan is broken\" whenever someone changes a security group by hand. Terraform is fine; it is reporting drift.",
+      goal: "Exit 0 with no drift, exit 2 and say drift when there are changes (no page), and page and exit 1 only when the plan itself fails.",
+      done: "Drift is a report; only a broken plan pages.",
+      file: `${H}/drift-check.sh`,
+      files: { [`${H}/drift-check.sh`]: `#!/usr/bin/env bash\n# Nightly: report drift in prod; page only when terraform itself is broken.\nset -euo pipefail\nif terraform plan -detailed-exitcode -input=false -no-color > plan.txt; then\n  echo "no drift"\nelse\n  echo "terraform plan failed" >&2\n  page-oncall "terraform plan is broken in prod"\n  exit 1\nfi\n` },
+      bins: {
+        terraform: (c) => {
+          if (c.args[0] !== "plan") { c.err("terraform: this playground only runs terraform plan\n"); return 1; }
+          const state = c.sys.spec.tfState || "drift";
+          if (state === "broken") { c.err("╷\n│ Error: No valid credential sources found\n╵\n"); return 1; }
+          if (state === "drift") {
+            c.out("  # aws_security_group.web will be updated in-place\n  ~ ingress = [ + { cidr_blocks = [\"0.0.0.0/0\"], from_port = 22 } ]\n\nPlan: 0 to add, 1 to change, 0 to destroy.\n");
+            return c.args.includes("-detailed-exitcode") ? 2 : 0;
+          }
+          c.out("No changes. Your infrastructure matches the configuration.\n");
+          return 0;
+        },
+        "page-oncall": (c) => { c.fs.write("/var/tmp/paged", (c.args[0] || "") + "\n", true); c.out("paged on-call\n"); return 0; }
+      },
+      hints: [
+        "Run terraform plan -detailed-exitcode > /dev/null; echo $?. What does 2 mean?",
+        "With -detailed-exitcode, 0 is no changes, 1 is an error and 2 is changes. if and set -e only see success or failure, so drift lands in the error branch.",
+        "Keep the status: rc=0; terraform plan -detailed-exitcode ... > plan.txt || rc=$?; then case $rc in 0) ... ;; 2) echo \"drift\"; exit 2 ;; *) page-oncall ...; exit 1 ;; esac"
+      ],
+      lesson: "Commands with more than two outcomes (terraform plan -detailed-exitcode, grep, diff) need their status captured with || rc=$? and a case, not if or set -e. scripts/terraform_drift_check.sh reads all three.",
+      tries: ["./drift-check.sh", "terraform plan -detailed-exitcode > /dev/null; echo $?", "cat plan.txt"],
+      check(sys) {
+        const paged = (r) => !!r.fs.get("/var/tmp/paged");
+        const drift = trial(this, sys, "./drift-check.sh");
+        const clean = trial(this, sys, "./drift-check.sh", { spec: { tfState: "clean" } });
+        const broken = trial(this, sys, "./drift-check.sh", { spec: { tfState: "broken" } });
+        if (paged(drift)) return bad("drift", "pages on-call");
+        if (drift.status !== 2 || !/drift/i.test(drift.out.replace(/no drift/gi, ""))) return bad("drift", drift.status === 0 ? "says no drift" : `exit ${drift.status} without saying drift`);
+        if (clean.status !== 0 || paged(clean)) return bad("no changes", `exit ${clean.status}${paged(clean) ? ", paged" : ""}`);
+        if (!paged(broken) || broken.status !== 1) return bad("plan broken", paged(broken) ? `exit ${broken.status}` : "nobody is paged");
+        return ok("drift-check.sh", "0 clean, 2 drift, 1 and a page when broken");
+      }
+    },
+
+    // --- Personal data ------------------------------------------------------------------
+    {
+      id: "piilog",
+      title: "Customers' details in the log",
+      level: "22",
+      story: "A privacy review found every new customer's e-mail address and mobile number in signup.log, which is shipped to the log platform and kept for a year.",
+      goal: "Keep logging each signup with its user id, but no e-mail address or phone number, not even encoded.",
+      done: "The log records the event, not the person.",
+      file: `${H}/signup.sh`,
+      files: {
+        [`${H}/signup.sh`]: `#!/usr/bin/env bash\n# Called by the web app for each new account: signup.sh USER_ID EMAIL PHONE\nset -euo pipefail\nuser_id=$1 email=$2 phone=$3\ncreate-account "$user_id" "$email" "$phone"\necho "$(date +%FT%T) signup user=$user_id email=$email phone=$phone" >> /var/log/shop/signup.log\n`,
+        "/var/log/shop/signup.log": ""
+      },
+      dirs: ["/var/lib/shop"],
+      bins: { "create-account": (c) => { c.fs.write("/var/lib/shop/accounts", c.args.join(",") + "\n", true); return 0; } },
+      hints: [
+        "Run ./signup.sh 48213 priya.sharma@example.com 9876543210, then cat /var/log/shop/signup.log.",
+        "The database needs the e-mail and phone; the log does not. Anyone who can read logs (and every copy of them) now holds personal data. chmod on one file does not reach the copies.",
+        "Log the event and the user id only: echo \"$(date +%FT%T) signup user=$user_id\" >> /var/log/shop/signup.log. Support can look the person up from the id when they need to."
+      ],
+      lesson: "Data minimisation applies to logs: record ids and events, not names, e-mails, phone or ID numbers. For logs you cannot change, mask on the way out (scripts/pii_redact.sh), and scan for leaks in CI (scripts/pii_scan.sh).",
+      tries: ["./signup.sh 48213 priya.sharma@example.com 9876543210", "cat /var/log/shop/signup.log"],
+      check(sys) {
+        const r = trial(this, sys, "./signup.sh 48213 priya.sharma@example.com 9876543210");
+        const log = r.text("/var/log/shop/signup.log") || "";
+        const leaks = ["priya", "example.com", "9876543210", "543210", "cHJpeWE", "OTg3NjU0"].filter((x) => log.toLowerCase().includes(x.toLowerCase()));
+        if (r.status !== 0 || !r.text("/var/lib/shop/accounts")) return verdict("signup", r, false, "the account was not created");
+        if (leaks.length) return bad("signup.log", `still holds ${leaks[0]}`);
+        if (!/signup/.test(log) || !/48213/.test(log)) return bad("signup.log", "the signup is no longer recorded with its user id");
+        return ok("signup.log", "event and user id only");
+      }
     }
   ];
 
@@ -1701,7 +1891,9 @@
     ["Functions and structure", ["funcreturn", "getopts", "nolocal", "sourcepath", "exitpipe"]],
     ["Jobs and signals", ["parallelfail", "xargsp", "timeout", "trapterm", "nohup"]],
     ["Safety", ["rmempty", "logrotate", "lockfile", "retry", "secretleak", "evalinject", "sudoredirect", "tmpname"]],
-    ["Cron and environment", ["cronpath", "cronenv", "crlf", "noshebang", "export"]]
+    ["Cron and environment", ["cronpath", "cronenv", "crlf", "noshebang", "export"]],
+    ["Automation at work", ["s3empty", "rollundo", "tfdrift"]],
+    ["Personal data", ["piilog"]]
   ];
   const order = GROUPS.flatMap(([, ids]) => ids);
   SCENARIOS.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
