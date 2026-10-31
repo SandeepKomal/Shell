@@ -543,7 +543,7 @@ window.QUEST = {
     ["date +%F_%H%M%S", "Timestamp for file names", "Reliability", "any"]
   ],
 
-  // The Shell arch tab: how bash turns a line of text into running programs.
+  // The How bash runs tab: how bash turns a line of text into running programs.
   architecture: [
     { id: "read", name: "Read", short: "one complete command", text: "Bash reads input until it has a complete command: a line, or more lines when a quote, `if`, `{` or here-document is still open. In a script it reads, runs, then reads the next command, which is why a syntax error late in a file does not stop the lines before it.", breaks: "A missing `fi` or quote: `syntax error: unexpected end of file`.", look: ["bash -n script.sh"] },
     { id: "tokens", name: "Tokenise", short: "words and operators", text: "The line is cut into words and operators (`|`, `&&`, `;`, `>`, `2>&1`, `(`). Quotes and backslashes are noted but kept; unquoted spaces separate words. This is why `NAME = value` is three words.", breaks: "`NAME = value` runs a command called NAME.", look: ["printf '[%s]\\n' a 'b c' \"d e\""] },
