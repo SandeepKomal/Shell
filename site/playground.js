@@ -4,7 +4,7 @@
 "use strict";
 
 (function () {
-  const { SCENARIOS, GROUPS, start } = window.ShellScenarios;
+  const { SCENARIOS, start } = window.ShellScenarios;
   const { h } = window.SQUI;
   const $ = (sel) => document.querySelector(sel);
   const out = $("#pg-out");
@@ -46,19 +46,8 @@
     out.scrollTop = out.scrollHeight;
   }
 
-  function renderPicker() {
-    const done = new Set(solved.get());
-    picker.replaceChildren(...GROUPS.map(([group, ids]) => {
-      const n = ids.filter((id) => done.has(id)).length;
-      return h("div.pg-group", null,
-        h("span.pg-group-name", null, group, h("span.count" + (n === ids.length ? ".done" : ""), null, `${n}/${ids.length}`)),
-        h("div.pg-group-items", null, ids.map((id) => {
-          const s = SCENARIOS.find((x) => x.id === id);
-          return h("button.pg-scn", { type: "button", "aria-pressed": String(s === scenario), title: done.has(id) ? `${s.title} (solved)` : s.title, onclick: () => { location.hash = "play/" + id; } },
-            done.has(id) ? h("span.pg-scn-done", { "aria-hidden": "true" }, "✓") : null, s.title);
-        })));
-    }));
-  }
+  // The picker, goal and story are shared with app.js, which draws them before this script loads.
+  const renderPicker = () => window.SQUI.renderPicker(scenario.id);
 
   // The live check: the scenario's script, run in a fresh copy of the server.
   function renderCheck() {
@@ -125,14 +114,7 @@
     print(`${scenario.title}. ${scenario.story}`, "dim");
     print("Run the script, read what bash says, then edit it. 'hint' if stuck, 'help' for what works here.", "dim");
     print("");
-    $("#pg-goal").textContent = "Goal: " + scenario.goal;
-    $("#pg-goal").className = "pg-goal";
-    $("#pg-story").replaceChildren(h("p", null, h("strong", null, scenario.title + ". "), scenario.story, h("span.muted", null, ` ${scenario.group} · Level ${scenario.level}.`)),
-      h("button.copy", { type: "button", onclick: async (e) => {
-        const b = e.currentTarget;
-        try { await navigator.clipboard.writeText(location.href.split("#")[0] + "#play/" + scenario.id); b.textContent = "Link copied"; } catch { b.textContent = "Select it"; }
-        setTimeout(() => { b.textContent = "Copy link"; }, 1400);
-      } }, "Copy link"));
+    window.SQUI.renderStory(scenario);
     input.placeholder = scenario.tries[0];
     renderPicker();
     renderTries();

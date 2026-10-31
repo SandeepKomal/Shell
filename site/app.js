@@ -52,10 +52,41 @@
   }
   document.querySelectorAll("[data-repo]").forEach((a) => { a.href = Q.repo + a.dataset.repo; });
 
-  const scenarios = () => (window.SQPlayground ? window.SQPlayground.scenarios : []);
+  const scenarios = () => window.TRACK_SCENARIOS;
   const scenarioTitle = (id) => (scenarios().find((s) => s.id === id) || {}).title;
   function practise(id) {
-    if (location.hash === "#play/" + id) window.SQPlayground.load(id); else location.hash = "play/" + id;
+    if (location.hash === "#play/" + id) need("play").then(() => window.SQPlayground.load(id)); else location.hash = "play/" + id;
+  }
+
+  // --- heavy features load after the first screen ------------------------------
+  // The first screen needs only data.js, scenario-index.js, search.js, this file and
+  // engage.js. The rest loads in the background once it is drawn, and at once when
+  // someone needs it.
+  const SIM = ["bash.js", "builtins.js", "coreutils.js"];
+  const FEATURES = {
+    play: [...SIM, "scenarios.js", "playground.js"],
+    xray: ["xray.js"],
+    quiz: ["quiz-bank.js"],
+    arch: [...SIM, "architecture.js"]
+  };
+  const scripts = {};
+  // Appends the scripts in order and resolves once they have all run. They download in
+  // parallel; a list of several runs in its own order.
+  function load(srcs) {
+    return Promise.all(srcs.map((src) => scripts[src] || (scripts[src] = new Promise((resolve, reject) => {
+      const el = document.createElement("script");
+      el.src = src;
+      el.async = srcs.length === 1;
+      el.onload = resolve;
+      el.onerror = () => { delete scripts[src]; el.remove(); reject(new Error("Could not load " + src)); };
+      document.body.append(el);
+    }))));
+  }
+  const ready = {};
+  // need("quiz").then(...): anything that calls into a lazy feature waits for it here.
+  function need(name) {
+    return ready[name] || (ready[name] = load(FEATURES[name]).then(() => { if (INIT[name]) INIT[name](); })
+      .catch((e) => { delete ready[name]; throw e; }));
   }
 
   // --- tabs and deep links ---------------------------------------------------
@@ -82,7 +113,11 @@
       if (a.dataset.tab === tab) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
     });
     if (want === "fix" && sub) { const i = Q.doctor.findIndex((d) => d.id === sub); if (i >= 0) { renderDoctor(i); requestAnimationFrame(() => scrollToEl($("#doctor-out"))); } }
-    if (want === "play" && sub && window.SQPlayground) window.SQPlayground.load(sub);
+    if (FEATURES[tab]) need(tab);
+    if (want === "pg-title") need("play");
+    if (tab === "cheats") drawCheats();
+    if (tab === "scripts") drawScripts();
+    if (want === "play" && sub) need("play").then(() => { if (location.hash === "#play/" + sub) window.SQPlayground.load(sub); });
     if (want === "script" && sub) openScript(sub);
     return { want, sub };
   }
@@ -112,7 +147,7 @@
 
   function renderLanding() {
     const n = scenarios().length;
-    const rules = window.SQXray ? window.SQXray.RULES.length : 0;
+    const rules = window.TRACK_XRAY_RULES;
     $("#stats").replaceChildren(...[[n, "incidents to fix in the playground"], [Q.levels.length, "levels, first script to production"], [Q.doctor.length, "bash errors, explained"]]
       .map(([v, l]) => h("div", null, h("b", null, String(v)), h("span", null, l))));
     const tiles = [
@@ -162,7 +197,7 @@
             h("div", null, h("h4", null, "Lab in a real shell"), window.SQEngage.order(lv, h("pre", null, h("code", null, lv.lab.join("\n"))))),
             h("div.level-links", null, h("span.muted", null, "Scripts:"), lv.scripts.map((p) => h("a.chip", { href: repoUrl(p) }, p))),
             h("div.level-links", null, practiseRow(lv.practise, "Practise:")))),
-        h("span.actions", null, h("a.small", { href: "#quiz", onclick: () => { $("#quiz-level").value = lv.id; renderQuiz(); } }, lv.id in scores ? `Quiz ${scores[lv.id]}%` : "Quiz"))));
+        h("span.actions", null, h("a.small", { href: "#quiz", onclick: () => quizFor(lv.id) }, lv.id in scores ? `Quiz ${scores[lv.id]}%` : "Quiz"))));
     }
     const stages = [];
     for (const lv of Q.levels) {
@@ -223,7 +258,11 @@
     if (!shown.length) out.append(h("p.muted", null, "No script matches. Try backup, rollout, ssh or personal."));
     $("#scripts-count").textContent = `${shown.length} of ${Q.scripts.length} scripts`;
   }
+  // The catalogue is drawn after the first screen, or when its tab opens.
+  let scriptsDrawn = false;
+  function drawScripts() { if (!scriptsDrawn) { scriptsDrawn = true; renderScriptGroups(); renderScripts(); } }
   function openScript(name) {
+    scriptsDrawn = true;
     scriptGroup = "";
     $("#scripts-q").value = "";
     renderScriptGroups();
@@ -236,6 +275,14 @@
 
   const EXAM_SIZE = 20;
   const questionsFor = (id) => (window.TRACK_QUIZ[id] || []).map((item) => ({ ...item, level: id }));
+  // Opens the quiz at a level (or "exam") once the question bank has loaded.
+  const quizFor = (id) => need("quiz").then(() => { $("#quiz-level").value = id; renderQuiz(); });
+  function initQuiz() {
+    $("#quiz-level").append(h("option", { value: "exam" }, `Exam: ${EXAM_SIZE} random questions from every level`));
+    for (const lv of Q.levels) $("#quiz-level").append(h("option", { value: lv.id }, `${lv.id} · ${lv.title} (${questionsFor(lv.id).length} questions)`));
+    $("#quiz-level").value = "00";
+    renderQuiz();
+  }
   function shuffle(list) {
     const a = [...list];
     for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
@@ -398,6 +445,9 @@
 
   // --- cheat sheet -----------------------------------------------------------------
 
+  // The cheat sheet is drawn after the first screen, or when its tab opens.
+  let cheatsDrawn = false;
+  function drawCheats() { if (!cheatsDrawn) { cheatsDrawn = true; renderCheats(); } }
   function renderCheats() {
     const q = $("#cheat-q").value.trim().toLowerCase();
     const out = $("#cheat-out");
@@ -413,7 +463,7 @@
       out.append(h("h3.group", null, group), h("ul.cheats", null, rows.map(([cmd, what, where]) => h("li", null,
         h("div", null, h("code", null, cmd), h("span.muted", null, what)),
         h("div.cheat-actions", null,
-          where ? h("button.copy", { type: "button", title: where === "any" ? "Run it in the playground" : `Run it in the scenario "${scenarioTitle(where)}"`, onclick: () => window.SQPlayground.prefill(cmd, where) }, "Try")
+          where ? h("button.copy", { type: "button", title: where === "any" ? "Run it in the playground" : `Run it in the scenario "${scenarioTitle(where)}"`, onclick: () => need("play").then(() => window.SQPlayground.prefill(cmd, where)) }, "Try")
             : h("a.copy.lab", { href: Q.repo, title: "Needs a real system: run it in your own shell" }, "Lab"),
           copyButton(cmd))))));
     }
@@ -450,16 +500,16 @@
   const go = (hash, then) => { location.hash = hash; if (then) setTimeout(then, 0); };
   function actions() {
     return [
-      { label: "Playground: fix a broken script", kind: "Section", run: () => go("path", () => scrollToEl($(".playground"))) },
+      { label: "Playground: fix a broken script", kind: "Section", run: () => { need("play"); go("path", () => scrollToEl($(".playground"))); } },
       { label: "Your path", kind: "Section", run: () => go("path", () => scrollToEl($("#path-title"))) },
-      { label: "Exam: random questions from every level", kind: "Quiz", run: () => go("quiz", () => { $("#quiz-level").value = "exam"; renderQuiz(); }) },
+      { label: "Exam: random questions from every level", kind: "Quiz", run: () => go("quiz", () => quizFor("exam")) },
       { label: "Scripts: the catalogue", kind: "Section", run: () => go("scripts", () => $("#scripts-q").focus()) },
       { label: "Script X-ray", kind: "Section", run: () => go("xray") },
       { label: "Fix: troubleshoot an error", kind: "Section", run: () => go("doctor", () => $("#doctor-q").focus()) },
       { label: "Cheat sheet", kind: "Section", run: () => go("cheats", () => $("#cheat-q").focus()) },
       { label: "How bash runs a command", kind: "Section", run: () => go("arch") },
       ...Q.levels.map((lv) => ({ label: `${lv.id} · ${lv.title}`, hint: lv.topic, kind: "Level", run: () => go("path", () => { const el = document.getElementById("level-" + lv.id); el.querySelector("details").open = true; scrollToEl(el); }) })),
-      ...Q.levels.map((lv) => ({ label: `Quiz: ${lv.id} · ${lv.title}`, kind: "Quiz", run: () => go("quiz", () => { $("#quiz-level").value = lv.id; renderQuiz(); }) })),
+      ...Q.levels.map((lv) => ({ label: `Quiz: ${lv.id} · ${lv.title}`, kind: "Quiz", run: () => go("quiz", () => quizFor(lv.id)) })),
       ...Q.scripts.map((sc) => ({ label: `Script: ${scriptName(sc.path)}`, hint: sc.what, kind: "Scripts", run: () => go("script/" + scriptName(sc.path).replace(/\.sh$/, "")) })),
       ...Q.doctor.map((d) => ({ label: `Error: ${d.title}`, hint: d.error, kind: "Troubleshoot", run: () => go("fix/" + d.id) })),
       ...scenarios().map((s) => ({ label: `Scenario: ${s.title}`, hint: s.group, kind: "Playground", run: () => go("play/" + s.id) }))
@@ -478,6 +528,7 @@
   }
   function openPalette() {
     if (palette.open) return;
+    need("play");
     paletteInput.value = "";
     active = 0;
     renderPalette();
@@ -505,14 +556,12 @@
 
   // --- init --------------------------------------------------------------------
 
-  $("#quiz-level").append(h("option", { value: "exam" }, `Exam: ${EXAM_SIZE} random questions from every level`));
-  for (const lv of Q.levels) $("#quiz-level").append(h("option", { value: lv.id }, `${lv.id} · ${lv.title} (${questionsFor(lv.id).length} questions)`));
-  $("#quiz-level").value = "00";
+  const INIT = { quiz: initQuiz };
   $("#quiz-level").addEventListener("change", renderQuiz);
-  $("#quiz-again").addEventListener("click", () => { renderQuiz(); scrollToEl($("#quiz-list")); });
-  $("#xray-go").addEventListener("click", explainPasted);
-  $("#xray-input").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) explainPasted(); });
-  $("#xray-example").addEventListener("click", () => { $("#xray-input").value = Q.xrayExample; explainPasted(); });
+  $("#quiz-again").addEventListener("click", () => need("quiz").then(() => { renderQuiz(); scrollToEl($("#quiz-list")); }));
+  $("#xray-go").addEventListener("click", () => need("xray").then(explainPasted));
+  $("#xray-input").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) need("xray").then(explainPasted); });
+  $("#xray-example").addEventListener("click", () => { $("#xray-input").value = Q.xrayExample; need("xray").then(explainPasted); });
   $("#xray-edit-btn").addEventListener("click", () => { pasted = null; showXray(); $("#xray-input").focus(); });
   $("#xray-clear").addEventListener("click", () => { pasted = null; $("#xray-input").value = ""; showXray(); $("#xray-input").focus(); });
   buildDoctorList();
@@ -526,19 +575,45 @@
   $("#scripts-q").addEventListener("input", renderScripts);
   $("#forget").addEventListener("click", forgetEverything);
 
-  window.SQUI = { h, rich, practise };
+  // The playground's picker, goal and story. They are drawn from the index with the first
+  // screen, so the playground keeps its size when the simulator arrives; playground.js
+  // redraws them as scenarios change.
+  function renderPicker(currentId) {
+    const done = new Set(store.get("pg-solved", []));
+    const groups = [];
+    for (const s of scenarios()) {
+      let g = groups.find((x) => x.name === s.group);
+      if (!g) groups.push(g = { name: s.group, list: [] });
+      g.list.push(s);
+    }
+    $("#pg-scenarios").replaceChildren(...groups.map(({ name, list }) => {
+      const n = list.filter((s) => done.has(s.id)).length;
+      return h("div.pg-group", null,
+        h("span.pg-group-name", null, name, h("span.count" + (n === list.length ? ".done" : ""), null, `${n}/${list.length}`)),
+        h("div.pg-group-items", null, list.map((s) =>
+          h("button.pg-scn", { type: "button", "aria-pressed": String(s.id === currentId), title: done.has(s.id) ? `${s.title} (solved)` : s.title, onclick: () => { location.hash = "play/" + s.id; } },
+            done.has(s.id) ? h("span.pg-scn-done", { "aria-hidden": "true" }, "✓") : null, s.title))));
+    }));
+  }
+  function renderStory(s) {
+    $("#pg-goal").textContent = "Goal: " + s.goal;
+    $("#pg-goal").className = "pg-goal";
+    $("#pg-story").replaceChildren(h("p", null, h("strong", null, s.title + ". "), s.story, h("span.muted", null, ` ${s.group} · Level ${s.level}.`)),
+      copyButton(pageUrl("play/" + s.id), "Copy link", "Link copied"));
+  }
+
+  window.SQUI = { h, rich, practise, need, renderPicker, renderStory };
   drawSignature(false);
   renderGuides();
-  renderQuiz();
-  renderScriptGroups();
-  renderScripts();
-  show();
-  // The scenario chips and Try buttons need the playground, which loads after this script.
+  // The first screen in one pass, as soon as the critical scripts have run; then the rest.
   window.addEventListener("DOMContentLoaded", () => {
+    const first = scenarios().find((s) => location.hash === "#play/" + s.id) || scenarios()[0];
     renderLanding();
     renderPath();
-    renderCheats();
-    const { want, sub } = show();
-    if (want === "play" && sub) setTimeout(() => window.SQPlayground.load(sub), 0);
+    window.SQEngage.render();
+    renderPicker(first.id);
+    renderStory(first);
+    show();
+    (window.requestIdleCallback || ((fn) => setTimeout(fn, 200)))(() => { drawCheats(); drawScripts(); for (const name of Object.keys(FEATURES)) need(name).catch(() => { /* retried on first use */ }); });
   });
 })();
