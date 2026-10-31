@@ -20,3 +20,7 @@ Contributions that make the scripts safer, clearer, and more useful for day-to-d
 - CI/CD helpers
 - Security checks
 - Monitoring and troubleshooting scripts
+
+## Personal data
+
+Never include real personal data in issues, pull requests, examples, logs or tests: no Aadhaar, PAN, phone numbers, personal emails, addresses, bank details or customer records. Use made-up values and reserved domains such as `example.com`. See [PRIVACY.md](PRIVACY.md).
